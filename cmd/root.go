@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
+	"path"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
+	"github.com/dmitriy-rs/rollercoaster/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -36,25 +37,51 @@ func execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	manager, err := manager.FindManager(&dir)
+	taskManager, err := manager.FindManager(&dir)
 	if err != nil {
 		logger.Error("", err)
 		return err
 	}
 
-	if manager == nil {
-		// Find closest .git directory and try to find task manager there
-		logger.Info("No task manager found in current directory, trying to find in parent directories")
+	logger.Debug("Current working directory: " + dir)
+
+	if taskManager == nil {
+		gitDir := findClosestGitDir(&dir)
+		logger.Debug("Current git working directory: " + gitDir)
+		if gitDir == "" {
+			logger.Warning("Could not find a task manager in the current directory or its parents")
+			return nil
+		}
+		taskManager, err = manager.FindManager(&gitDir)
+		if err != nil {
+			logger.Error("", err)
+			return err
+		}
 	}
 
-	tasks, err := manager.ListTasks()
-	if err != nil {
-		logger.Error("Failed to list tasks", err)
-		return err
+	if len(args) == 0 {
+		return ui.RenderTaskList(taskManager)
+	} else {
+		return manager.ExecuteClosestTask(taskManager, args[0])
 	}
-	fmt.Printf("Found tasks: %s\n", tasks)
-	if len(tasks) != 0 {
-		manager.ExecuteTask(tasks[0])
+}
+
+func findClosestGitDir(dir *string) string {
+	if dir == nil || *dir == "" {
+		return ""
 	}
-	return nil
+	currentDir := *dir
+	for {
+		gitPath := path.Join(currentDir, ".git")
+		info, err := os.Stat(gitPath)
+		if err == nil && info.IsDir() {
+			return currentDir
+		}
+		parentDir := path.Dir(currentDir)
+		if parentDir == currentDir {
+			break
+		}
+		currentDir = parentDir
+	}
+	return ""
 }

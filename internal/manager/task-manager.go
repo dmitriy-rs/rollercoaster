@@ -4,16 +4,23 @@ import (
 	"errors"
 	"os/exec"
 	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/dmitriy-rs/rollercoaster/internal/task"
 )
 
 type TaskManager struct {
-	version string
-	tasks   []string
+	config    *TaskManagerConfig
+	filenames []string
+}
+
+type taskMap = map[string]struct {
+	Description string `yaml:"desc"`
 }
 
 type TaskManagerConfig struct {
-	Version string              `yaml:"version"`
-	Tasks   map[string]struct{} `yaml:"tasks"`
+	Version string  `yaml:"version"`
+	Tasks   taskMap `yaml:"tasks"`
 }
 
 var localTaskFilenames = [4]string{
@@ -30,43 +37,38 @@ var distTaskFilenames = [4]string{
 }
 
 func ParseTaskManager(dir *string) (*TaskManager, error) {
-	tasks := []string{}
+	tm := &TaskManager{}
 
 	localFile := FindFirstInDirectory(dir, localTaskFilenames[:])
 	distFile := FindFirstInDirectory(dir, distTaskFilenames[:])
 
-	if localFile != nil {
-		if err := populateTasksFromFile(localFile, &tasks); err != nil {
-			return nil, err
-		}
-	}
 	if distFile != nil {
-		if err := populateTasksFromFile(distFile, &tasks); err != nil {
+		config, err := parseConfig(distFile)
+		if err != nil {
 			return nil, err
 		}
+		tm.config = config
+		tm.filenames = append(tm.filenames, distFile.filename)
 	}
+	if localFile != nil {
+		config, err := parseConfig(localFile)
 
-	if len(tasks) == 0 {
+		if err != nil {
+			return nil, err
+		}
+		if tm.config == nil {
+			tm.config = config
+		} else {
+			for taskName, task := range config.Tasks {
+				tm.config.Tasks[taskName] = task
+			}
+		}
+		tm.filenames = append(tm.filenames, localFile.filename)
+	}
+	if tm.config == nil {
 		return nil, nil
 	}
-
-	return &TaskManager{
-		version: "3.0",
-		tasks:   tasks,
-	}, nil
-}
-
-func populateTasksFromFile(file *ManagerFile, tasks *[]string) error {
-	config, err := parseConfig(file)
-	if err != nil {
-		return err
-	}
-
-	for task := range config.Tasks {
-		*tasks = append(*tasks, task)
-	}
-
-	return nil
+	return tm, nil
 }
 
 func parseConfig(file *ManagerFile) (*TaskManagerConfig, error) {
@@ -86,14 +88,37 @@ func parseConfig(file *ManagerFile) (*TaskManagerConfig, error) {
 	return &config, nil
 }
 
-func (tm *TaskManager) ListTasks() ([]string, error) {
-	if tm.tasks == nil {
+func (tm *TaskManager) ListTasks() ([]task.Task, error) {
+	if tm.config.Tasks == nil {
 		return nil, nil
 	}
-	return tm.tasks, nil
+	tasks := []task.Task{}
+	for name, taskInfo := range tm.config.Tasks {
+		tasks = append(tasks, task.Task{
+			Name:        name,
+			Description: taskInfo.Description,
+		})
+	}
+	task.SortTasks(tasks)
+	return tasks, nil
 }
 
-func (tm *TaskManager) ExecuteTask(name string) {
-	cmd := exec.Command("task", name)
+func (tm *TaskManager) ExecuteTask(task task.Task) {
+	cmd := exec.Command("task", task.Name)
 	TaskExecute(cmd)
+}
+
+var (
+	taskNameStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#43aba2")).
+			Bold(true)
+	textColor = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#3f3f3f"))
+)
+
+func (tm *TaskManager) GetTitle() string {
+	if len(tm.filenames) == 0 {
+		return taskNameStyle.Render("task") + textColor.Render(" task runner")
+	}
+	return taskNameStyle.Render("task") + textColor.Render(" task runner. parsed from "+strings.Join(tm.filenames, ", "))
 }
