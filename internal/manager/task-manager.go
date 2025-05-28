@@ -48,7 +48,7 @@ func ParseTaskManager(dir *string) (*TaskManager, error) {
 			return nil, err
 		}
 		tm.config = config
-		tm.filenames = append(tm.filenames, distFile.filename)
+		tm.filenames = append(tm.filenames, distFile.Filename)
 	}
 	if localFile != nil {
 		config, err := parseConfig(localFile)
@@ -63,7 +63,7 @@ func ParseTaskManager(dir *string) (*TaskManager, error) {
 				tm.config.Tasks[taskName] = task
 			}
 		}
-		tm.filenames = append(tm.filenames, localFile.filename)
+		tm.filenames = append(tm.filenames, localFile.Filename)
 	}
 	if tm.config == nil {
 		return nil, nil
@@ -78,7 +78,7 @@ func parseConfig(file *ManagerFile) (*TaskManagerConfig, error) {
 	}
 
 	if config.Version == "" {
-		return nil, errors.New("Taskfile version is not specified: " + file.filename)
+		return nil, errors.New("Taskfile version is not specified: " + file.Filename)
 	}
 
 	if !strings.HasPrefix(config.Version, "3") {

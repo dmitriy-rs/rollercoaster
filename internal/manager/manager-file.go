@@ -12,28 +12,28 @@ import (
 )
 
 type ManagerFile struct {
-	filename string
-	file     []byte
+	Filename string
+	File     []byte
 }
 
 func ParseFileAsYaml[T any](mf *ManagerFile) (T, error) {
 	var result T
-	err := yaml.Unmarshal(mf.file, &result)
+	err := yaml.Unmarshal(mf.File, &result)
 	if err != nil {
-		message := fmt.Sprintf("Failed to parse YAML config %s file", mf.filename)
+		message := fmt.Sprintf("Failed to parse YAML config %s file", mf.Filename)
 		logger.Error(message, err)
-		os.Exit(1)
+		return result, err
 	}
 	return result, nil
 }
 
 func ParseFileAsJson[T any](mf *ManagerFile) (T, error) {
 	var result T
-	err := json.Unmarshal(mf.file, &result)
+	err := json.Unmarshal(mf.File, &result)
 	if err != nil {
-		message := fmt.Sprintf("Failed to parse JSON config %s file", mf.filename)
+		message := fmt.Sprintf("Failed to parse JSON config %s file", mf.Filename)
 		logger.Error(message, err)
-		os.Exit(1)
+		return result, err
 	}
 	return result, nil
 }
@@ -51,7 +51,7 @@ func FindFirstInDirectory(dir *string, filenames []string) *ManagerFile {
 func FindInDirectory(dir *string, filename string) *ManagerFile {
 	if dir == nil {
 		logger.Error("Directory is nil", nil)
-		os.Exit(1)
+		return nil
 	}
 
 	if filename == "" {
@@ -71,7 +71,7 @@ func FindInDirectory(dir *string, filename string) *ManagerFile {
 	}
 
 	return &ManagerFile{
-		filename: fullPath,
-		file:     file,
+		Filename: fullPath,
+		File:     file,
 	}
 }

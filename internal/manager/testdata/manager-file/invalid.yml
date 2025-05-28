@@ -1,0 +1,11 @@
+version: '3'
+
+tasks:
+  build:
+    desc: "Build application"
+    cmds:
+      - go build
+  test:
+      cmds:
+    - go test
+      desc: "Run tests" 

@@ -1,0 +1,91 @@
+version: '3'
+
+vars:
+  GREETING: Hello World
+  BUILD_DIR: ./build
+  BINARY_NAME: app
+
+env:
+  CGO_ENABLED: 0
+  GOOS: linux
+  GOARCH: amd64
+
+tasks:
+  default:
+    desc: "Show available tasks"
+    cmds:
+      - echo "Available tasks"
+    silent: true
+
+  build:
+    desc: "Build the application"
+    deps: [clean]
+    cmds:
+      - echo "Building the application"
+
+  test:
+    desc: "Run tests"
+    cmds:
+      - echo "Running tests"
+
+  test:coverage:
+    desc: "Run tests with coverage"
+    cmds:
+      - echo "Running tests with coverage"
+
+  lint:
+    desc: "Run linters"
+    cmds:
+      - echo "Running linters"
+    silent: true
+
+  clean:
+    desc: "Clean build artifacts"
+    cmds:
+      - echo "Cleaning build artifacts"
+    silent: true
+
+  install:
+    desc: "Install dependencies"
+    cmds:
+      - echo "Installing dependencies"
+
+  docker:build:
+    desc: "Build Docker image"
+    deps: [build]
+    cmds:
+      - echo "Building Docker image"
+
+  docker:run:
+    desc: "Run Docker container"
+    deps: [docker:build]
+    cmds:
+      - echo "Running Docker container"
+
+  dev:
+    desc: "Run in development mode"
+    cmds:
+      - echo "Running in development mode"
+    watch: true
+
+  release:
+    desc: "Create a release"
+    deps: [test, lint, build]
+    cmds:
+      - echo "{{.GREETING}} - Creating release"
+      - echo "Creating release"
+
+  benchmark:
+    desc: "Run benchmarks"
+    cmds:
+      - echo "Running benchmarks"
+
+  generate:
+    desc: "Generate code"
+    cmds:
+      - echo "Generating code"
+
+  security:
+    desc: "Run security checks"
+    cmds:
+      - echo "Running security checks"
