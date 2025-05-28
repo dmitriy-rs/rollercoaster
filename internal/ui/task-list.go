@@ -34,6 +34,7 @@ func RenderTaskList(manager manager.Manager) error {
 
 	maxSpaces := getMaxSpaces(tasks)
 
+	println(tasksTitleStyle.Underline(false).Render("Choose a task to run:"))
 	println("\n" + manager.GetTitle())
 	println("\n" + tasksTitleStyle.Render("Name") + renderSpaces(4, maxSpaces) + tasksTitleStyle.Render("Description"))
 

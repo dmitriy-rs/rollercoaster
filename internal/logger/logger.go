@@ -33,8 +33,8 @@ var (
 var (
 	errorMessageChip = errStyle.Render(" ERROR ")
 	infoMessageChip  = infoStyle.Render(" INFO ")
-	warnMessageChip  = warnStyle.Render(" WARNING ")
-	debugMessageChip = debugStyle.Render(" DEBUG ")
+	warnMessageChip  = warnStyle.Render(" WARN ")
+	debugMessageChip = debugStyle.Render(" DEBG ")
 )
 
 func Error(message string, err error) {

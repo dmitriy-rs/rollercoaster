@@ -103,8 +103,8 @@ func (tm *TaskManager) ListTasks() ([]task.Task, error) {
 	return tasks, nil
 }
 
-func (tm *TaskManager) ExecuteTask(task task.Task) {
-	cmd := exec.Command("task", task.Name)
+func (tm *TaskManager) ExecuteTask(taskName string) {
+	cmd := exec.Command("task", taskName)
 	TaskExecute(cmd)
 }
 

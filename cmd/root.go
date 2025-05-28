@@ -62,7 +62,12 @@ func execute(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
 		return ui.RenderTaskList(taskManager)
 	} else {
-		return manager.ExecuteClosestTask(taskManager, args[0])
+		err = manager.ExecuteClosestTask(taskManager, args[0])
+		if err != nil {
+			logger.Warning("No tasks found")
+			return ui.RenderTaskList(taskManager)
+		}
+		return nil
 	}
 }
 
