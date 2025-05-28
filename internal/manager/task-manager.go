@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
+	"github.com/dmitriy-rs/rollercoaster/internal/ui"
 )
 
 type TaskManager struct {
@@ -105,20 +106,14 @@ func (tm *TaskManager) ListTasks() ([]task.Task, error) {
 
 func (tm *TaskManager) ExecuteTask(task *task.Task, args ...string) {
 	cmd := exec.Command("task", task.Name)
-	TaskExecute(cmd, args...)
+	CommandExecute(cmd, args...)
 }
 
-var (
-	taskNameStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#43aba2")).
-			Bold(true)
-	textColor = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#3f3f3f"))
-)
+
 
 func (tm *TaskManager) GetTitle() string {
 	if len(tm.filenames) == 0 {
-		return taskNameStyle.Render("task") + textColor.Render(" task runner")
+		return ui.TaskNameStyle.Render("task") + ui.TextColor.Render(" task runner")
 	}
-	return taskNameStyle.Render("task") + textColor.Render(" task runner. parsed from "+strings.Join(tm.filenames, ", "))
+	return ui.TaskNameStyle.Render("task") + ui.TextColor.Render(" task runner. parsed from "+strings.Join(tm.filenames, ", "))
 }

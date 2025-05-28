@@ -19,7 +19,7 @@ func TestTaskExecute_SuccessfulCommand(t *testing.T) {
 	}
 
 	// Execute the task - should complete without error
-	manager.TaskExecute(cmd)
+	manager.CommandExecute(cmd)
 
 	// The test passes if the function returns without panicking
 	// The output will go to os.Stdout as intended by the function
@@ -35,7 +35,7 @@ func TestTaskExecute_CommandWithError(t *testing.T) {
 	}
 
 	// Execute the task - should not panic or exit
-	manager.TaskExecute(cmd)
+	manager.CommandExecute(cmd)
 
 	// The function should return gracefully even on error
 	// This test passes if no panic occurs
@@ -54,7 +54,7 @@ func TestTaskExecute_WithAdditionalArgs(t *testing.T) {
 	originalArgsLen := len(cmd.Args)
 
 	// Execute with additional arguments
-	manager.TaskExecute(cmd, "test", "argument")
+	manager.CommandExecute(cmd, "test", "argument")
 
 	// Verify the arguments were added (they should be added before execution)
 	if len(cmd.Args) <= originalArgsLen {
@@ -88,7 +88,7 @@ func TestTaskExecute_NoAdditionalArgs(t *testing.T) {
 	originalArgsLen := len(cmd.Args)
 
 	// Execute without additional arguments
-	manager.TaskExecute(cmd)
+	manager.CommandExecute(cmd)
 
 	// Verify no additional args were added
 	if len(cmd.Args) != originalArgsLen {
@@ -114,7 +114,7 @@ func TestTaskExecute_StdoutStderrAssignment(t *testing.T) {
 	}
 
 	// Execute the task
-	manager.TaskExecute(cmd)
+	manager.CommandExecute(cmd)
 
 	// Verify that stdout and stderr are set to os.Stdout and os.Stderr
 	if cmd.Stdout != os.Stdout {
@@ -130,7 +130,7 @@ func TestTaskExecute_CommandNotFound(t *testing.T) {
 	cmd := exec.Command("nonexistentcommand12345")
 
 	// Execute the task - should handle the error gracefully
-	manager.TaskExecute(cmd)
+	manager.CommandExecute(cmd)
 
 	// The function should return without panicking
 	// This test passes if no panic occurs
@@ -141,7 +141,7 @@ func TestTaskExecute_EmptyCommand(t *testing.T) {
 	cmd := exec.Command("")
 
 	// Execute the task - should handle the error gracefully
-	manager.TaskExecute(cmd)
+	manager.CommandExecute(cmd)
 
 	// The function should return without panicking
 	// This test passes if no panic occurs

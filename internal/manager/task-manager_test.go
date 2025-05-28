@@ -19,7 +19,7 @@ func setupTaskManagerTestDir(t *testing.T, dirName string) string {
 }
 
 func cleanupTaskManagerTestDir(testDir string) {
-	os.RemoveAll(filepath.Dir(testDir))
+	_ = os.RemoveAll(filepath.Dir(testDir))
 }
 
 func createTaskFile(t *testing.T, dir, filename, content string) {
@@ -372,7 +372,7 @@ func TestParseTaskManager_NoTasksSection(t *testing.T) {
 		t.Fatalf("Failed to list tasks: %v", err)
 	}
 
-	if tasks != nil && len(tasks) != 0 {
+	if len(tasks) != 0 {
 		t.Errorf("Expected 0 tasks, got %d", len(tasks))
 	}
 }

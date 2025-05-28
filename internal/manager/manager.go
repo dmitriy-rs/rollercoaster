@@ -2,6 +2,8 @@ package manager
 
 import (
 	"fmt"
+	"os"
+	"path"
 	"sort"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
@@ -24,7 +26,34 @@ func FindManager(dir *string) (Manager, error) {
 	if manager != nil {
 		return manager, nil
 	}
-	return nil, nil
+
+	gitDir := findClosestGitDir(dir)
+	if gitDir == "" {
+		logger.Warning("Could not find a task manager in the current directory or its parents")
+		return nil, nil
+	}
+
+	return ParseTaskManager(&gitDir)
+}
+
+func findClosestGitDir(dir *string) string {
+	if dir == nil || *dir == "" {
+		return ""
+	}
+	currentDir := *dir
+	for {
+		gitPath := path.Join(currentDir, ".git")
+		info, err := os.Stat(gitPath)
+		if err == nil && info.IsDir() {
+			return currentDir
+		}
+		parentDir := path.Dir(currentDir)
+		if parentDir == currentDir {
+			break
+		}
+		currentDir = parentDir
+	}
+	return ""
 }
 
 func FindClosestTask(manager Manager, arg string) (*task.Task, error) {

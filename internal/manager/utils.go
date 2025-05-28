@@ -8,7 +8,7 @@ import (
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 )
 
-func TaskExecute(cmd *exec.Cmd, args ...string) {
+func CommandExecute(cmd *exec.Cmd, args ...string) {
 	if len(args) > 0 {
 		cmd.Args = append(cmd.Args, args...)
 	}

@@ -46,11 +46,11 @@ func TestError(t *testing.T) {
 
 			logger.Error(tt.message, tt.err)
 
-			w.Close()
+			_ = w.Close()
 			os.Stderr = oldStderr
 
 			var buf bytes.Buffer
-			buf.ReadFrom(r)
+			_, _ = buf.ReadFrom(r)
 			output := strings.TrimSpace(buf.String())
 
 			// Remove ANSI color codes for comparison
@@ -99,11 +99,11 @@ func TestFatal(t *testing.T) {
 				logger.Error("", tt.err)
 			}
 
-			w.Close()
+			_ = w.Close()
 			os.Stderr = oldStderr
 
 			var buf bytes.Buffer
-			buf.ReadFrom(r)
+			_, _ = buf.ReadFrom(r)
 			output := strings.TrimSpace(buf.String())
 
 			// Remove ANSI color codes for comparison
@@ -142,11 +142,11 @@ func TestInfo(t *testing.T) {
 
 			logger.Info(tt.message)
 
-			w.Close()
+			_ = w.Close()
 			os.Stdout = oldStdout
 
 			var buf bytes.Buffer
-			buf.ReadFrom(r)
+			_, _ = buf.ReadFrom(r)
 			output := strings.TrimSpace(buf.String())
 
 			// Remove ANSI color codes for comparison
@@ -185,11 +185,11 @@ func TestWarning(t *testing.T) {
 
 			logger.Warning(tt.message)
 
-			w.Close()
+			_ = w.Close()
 			os.Stdout = oldStdout
 
 			var buf bytes.Buffer
-			buf.ReadFrom(r)
+			_, _ = buf.ReadFrom(r)
 			output := strings.TrimSpace(buf.String())
 
 			// Remove ANSI color codes for comparison
@@ -233,11 +233,11 @@ func TestDebug(t *testing.T) {
 
 			logger.Debug(tt.messages...)
 
-			w.Close()
+			_ = w.Close()
 			os.Stdout = oldStdout
 
 			var buf bytes.Buffer
-			buf.ReadFrom(r)
+			_, _ = buf.ReadFrom(r)
 			output := strings.TrimSpace(buf.String())
 
 			// Remove ANSI color codes for comparison

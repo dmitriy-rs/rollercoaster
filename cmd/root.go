@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"os"
-	"path"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
@@ -41,21 +40,8 @@ func execute(cmd *cobra.Command, args []string) error {
 		logger.Error("", err)
 		return err
 	}
-
-	logger.Debug("Current working directory: " + dir)
-
 	if taskManager == nil {
-		gitDir := findClosestGitDir(&dir)
-		logger.Debug("Current git working directory: " + gitDir)
-		if gitDir == "" {
-			logger.Warning("Could not find a task manager in the current directory or its parents")
-			return nil
-		}
-		taskManager, err = manager.FindManager(&gitDir)
-		if err != nil {
-			logger.Error("", err)
-			return err
-		}
+		return nil
 	}
 
 	if len(args) == 0 {
@@ -71,24 +57,4 @@ func execute(cmd *cobra.Command, args []string) error {
 		taskManager.ExecuteTask(closestTask, commandArgs...)
 		return nil
 	}
-}
-
-func findClosestGitDir(dir *string) string {
-	if dir == nil || *dir == "" {
-		return ""
-	}
-	currentDir := *dir
-	for {
-		gitPath := path.Join(currentDir, ".git")
-		info, err := os.Stat(gitPath)
-		if err == nil && info.IsDir() {
-			return currentDir
-		}
-		parentDir := path.Dir(currentDir)
-		if parentDir == currentDir {
-			break
-		}
-		currentDir = parentDir
-	}
-	return ""
 }
