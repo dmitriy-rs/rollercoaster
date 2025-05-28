@@ -15,7 +15,6 @@ var rootCmd = &cobra.Command{
 	Short:         "rollercoaster is a cli tool for running tasks/scripts in current directory",
 	Long:          "rollercoaster is a cli tool for running tasks/scripts in current directory.\nIt allows you to run it without knowing the name of the manager and script.",
 	SilenceErrors: false,
-	Args:          cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := execute(cmd, args); err != nil {
 			os.Exit(1)
@@ -25,7 +24,7 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		logger.Error("Oops. An error occurred while executing rollercoaster", err)
+		// logger.Error("Oops. An error occurred while executing rollercoaster", err)
 		os.Exit(1)
 	}
 }
@@ -62,11 +61,14 @@ func execute(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
 		return ui.RenderTaskList(taskManager)
 	} else {
-		err = manager.ExecuteClosestTask(taskManager, args[0])
+		commandName := args[0]
+		commandArgs := args[1:]
+		closestTask, err := manager.FindClosestTask(taskManager, commandName)
 		if err != nil {
 			logger.Warning("No tasks found")
 			return ui.RenderTaskList(taskManager)
 		}
+		taskManager.ExecuteTask(closestTask, commandArgs...)
 		return nil
 	}
 }

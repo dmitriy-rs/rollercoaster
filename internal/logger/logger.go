@@ -64,6 +64,6 @@ func Warning(message string) {
 	_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", warnMessageChip, message)
 }
 
-func Debug(message any) {
+func Debug(message ...any) {
 	_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", debugMessageChip, message)
 }

@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -20,6 +21,17 @@ func ParseFileAsYaml[T any](mf *ManagerFile) (T, error) {
 	err := yaml.Unmarshal(mf.file, &result)
 	if err != nil {
 		message := fmt.Sprintf("Failed to parse YAML config %s file", mf.filename)
+		logger.Error(message, err)
+		os.Exit(1)
+	}
+	return result, nil
+}
+
+func ParseFileAsJson[T any](mf *ManagerFile) (T, error) {
+	var result T
+	err := json.Unmarshal(mf.file, &result)
+	if err != nil {
+		message := fmt.Sprintf("Failed to parse JSON config %s file", mf.filename)
 		logger.Error(message, err)
 		os.Exit(1)
 	}

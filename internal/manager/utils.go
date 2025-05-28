@@ -8,7 +8,11 @@ import (
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 )
 
-func TaskExecute(cmd *exec.Cmd) {
+func TaskExecute(cmd *exec.Cmd, args ...string) {
+	if len(args) > 0 {
+		cmd.Args = append(cmd.Args, args...)
+	}
+
 	logger.Debug(fmt.Sprintf("Executing task: %s", cmd.Args))
 
 	cmd.Stdout = os.Stdout

@@ -13,7 +13,7 @@ type Manager interface {
 	GetTitle() string
 
 	ListTasks() ([]task.Task, error)
-	ExecuteTask(name string)
+	ExecuteTask(task *task.Task, args ...string)
 }
 
 func FindManager(dir *string) (Manager, error) {
@@ -27,11 +27,11 @@ func FindManager(dir *string) (Manager, error) {
 	return nil, nil
 }
 
-func ExecuteClosestTask(manager Manager, arg string) error {
+func FindClosestTask(manager Manager, arg string) (*task.Task, error) {
 	tasks, err := manager.ListTasks()
 	if err != nil {
 		logger.Error("Failed to list tasks", err)
-		return err
+		return nil, err
 	}
 
 	logger.Debug(fmt.Sprintf("Found tasks: %s", tasks))
@@ -47,8 +47,14 @@ func ExecuteClosestTask(manager Manager, arg string) error {
 	logger.Debug(fmt.Sprintf("Fuzzy matches for '%s': %v", arg, matches))
 
 	if len(matches) != 0 {
-		manager.ExecuteTask(matches[0].Target)
-		return nil
+		var matchedTask *task.Task
+		for _, task := range tasks {
+			if task.Name == matches[0].Target {
+				matchedTask = &task
+				break
+			}
+		}
+		return matchedTask, nil
 	}
-	return fmt.Errorf("no task found for '%s'", arg)
+	return nil, fmt.Errorf("no task found for '%s'", arg)
 }
