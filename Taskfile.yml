@@ -1,7 +1,20 @@
 version: '3'
 
 tasks:
+  lint:
+    cmds:
+      - golangci-lint run
+    desc: "Run linters on the codebase"
+    silent: true
+
+  format:
+    cmds:
+      - golangci-lint fmt
+    desc: "Format the codebase"
+    silent: true
+
   run:
     cmds:
-      - go run src/main.go
+      - echo "Running the task..."
+    desc: "Run a simple task"
     silent: true
