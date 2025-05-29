@@ -4,6 +4,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	jsmanager "github.com/dmitriy-rs/rollercoaster/internal/manager/js"
 )
 
@@ -79,32 +82,19 @@ func TestParseJsWorkspace(t *testing.T) {
 			workspace, err := jsmanager.ParseJsWorkspace(&testDir)
 
 			if tt.wantError {
-				if err == nil {
-					t.Errorf("ParseJsWorkspace() expected error, got nil")
-				}
+				assert.Error(t, err, "ParseJsWorkspace() should return an error")
 				return
 			}
 
-			if err != nil {
-				t.Errorf("ParseJsWorkspace() unexpected error: %v", err)
-				return
-			}
+			require.NoError(t, err, "ParseJsWorkspace() should not return an error")
 
 			if tt.wantNil {
-				if workspace != nil {
-					t.Errorf("ParseJsWorkspace() expected nil, got %v", workspace)
-				}
+				assert.Nil(t, workspace, "ParseJsWorkspace() should return nil workspace")
 				return
 			}
 
-			if workspace == nil {
-				t.Errorf("ParseJsWorkspace() expected workspace, got nil")
-				return
-			}
-
-			if (*workspace).Name() != tt.wantName {
-				t.Errorf("ParseJsWorkspace() name = %v, want %v", (*workspace).Name(), tt.wantName)
-			}
+			require.NotNil(t, workspace, "ParseJsWorkspace() should return a workspace")
+			assert.Contains(t, (*workspace).Name(), tt.wantName, "workspace name should match expected")
 		})
 	}
 }

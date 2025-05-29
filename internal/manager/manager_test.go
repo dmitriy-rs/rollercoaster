@@ -462,88 +462,181 @@ func TestFindClosestTask_TaskNameSliceCreation(t *testing.T) {
 	}
 }
 
-func TestManagerParseConfig_GetDirectories_SameDirectory(t *testing.T) {
-	config := &manager.ManagerParseConfig{
-		CurrentDir: "/user/project",
-		RootDir:    "/user/project",
+func TestFindClosestTaskFromList_SingleManager(t *testing.T) {
+	tasks := []task.Task{
+		{Name: "build", Description: "Build the application"},
+		{Name: "test", Description: "Run tests"},
+		{Name: "deploy", Description: "Deploy the application"},
 	}
 
-	result := config.GetDirectories()
-	expected := []string{"/user/project"}
+	manager1 := NewMockManager("Manager1", tasks)
+	managers := []manager.Manager{manager1}
 
-	assert.Equal(t, expected, result, "Should return single directory when current equals root")
-	assert.Equal(t, len(expected), len(result), "Result should have expected length")
+	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "build")
+	require.NoError(t, err, "Should not return error when task is found")
+	require.NotNil(t, resultManager, "Should return the manager that contains the task")
+	require.NotNil(t, resultTask, "Should return the found task")
+
+	assert.Equal(t, "Manager1", resultManager.GetTitle().Name, "Should return the correct manager")
+	assert.Equal(t, "build", resultTask.Name, "Should return the correct task")
+	assert.Equal(t, "Build the application", resultTask.Description, "Task description should match")
 }
 
-func TestManagerParseConfig_GetDirectories_EmptyRootDir(t *testing.T) {
-	config := &manager.ManagerParseConfig{
-		CurrentDir: "/user/test/path",
-		RootDir:    "",
+func TestFindClosestTaskFromList_TwoManagers_TaskInFirst(t *testing.T) {
+	tasks1 := []task.Task{
+		{Name: "build", Description: "Build the application"},
+		{Name: "test", Description: "Run tests"},
+	}
+	tasks2 := []task.Task{
+		{Name: "deploy", Description: "Deploy the application"},
+		{Name: "lint", Description: "Run linters"},
 	}
 
-	result := config.GetDirectories()
-	expected := []string{"/user/test/path"}
+	manager1 := NewMockManager("Manager1", tasks1)
+	manager2 := NewMockManager("Manager2", tasks2)
+	managers := []manager.Manager{manager1, manager2}
 
-	assert.Equal(t, expected, result, "Should return only current dir when root is empty")
-	assert.Equal(t, len(expected), len(result), "Result should have expected length")
+	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "build")
+	require.NoError(t, err, "Should not return error when task is found")
+	require.NotNil(t, resultManager, "Should return the manager that contains the task")
+	require.NotNil(t, resultTask, "Should return the found task")
+
+	assert.Equal(t, "Manager1", resultManager.GetTitle().Name, "Should return the first manager with matching task")
+	assert.Equal(t, "build", resultTask.Name, "Should return the correct task")
 }
 
-func TestManagerParseConfig_GetDirectories_EmptyCurrentDir(t *testing.T) {
-	config := &manager.ManagerParseConfig{
-		CurrentDir: "",
-		RootDir:    "/user",
+func TestFindClosestTaskFromList_TwoManagers_TaskInSecond(t *testing.T) {
+	tasks1 := []task.Task{
+		{Name: "build", Description: "Build the application"},
+		{Name: "test", Description: "Run tests"},
+	}
+	tasks2 := []task.Task{
+		{Name: "deploy", Description: "Deploy the application"},
+		{Name: "lint", Description: "Run linters"},
 	}
 
-	result := config.GetDirectories()
-	expected := []string{"/user"}
+	manager1 := NewMockManager("Manager1", tasks1)
+	manager2 := NewMockManager("Manager2", tasks2)
+	managers := []manager.Manager{manager1, manager2}
 
-	assert.Equal(t, expected, result, "Should return only root dir when current is empty")
-	assert.Equal(t, len(expected), len(result), "Result should have expected length")
+	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "deploy")
+	require.NoError(t, err, "Should not return error when task is found")
+	require.NotNil(t, resultManager, "Should return the manager that contains the task")
+	require.NotNil(t, resultTask, "Should return the found task")
+
+	assert.Equal(t, "Manager2", resultManager.GetTitle().Name, "Should return the second manager with matching task")
+	assert.Equal(t, "deploy", resultTask.Name, "Should return the correct task")
 }
 
-func TestManagerParseConfig_GetDirectories_BothEmpty(t *testing.T) {
-	config := &manager.ManagerParseConfig{
-		CurrentDir: "",
-		RootDir:    "",
+func TestFindClosestTaskFromList_ThreeManagers_FuzzyMatch(t *testing.T) {
+	tasks1 := []task.Task{
+		{Name: "build-frontend", Description: "Build frontend"},
+		{Name: "test-frontend", Description: "Test frontend"},
+	}
+	tasks2 := []task.Task{
+		{Name: "build-backend", Description: "Build backend"},
+		{Name: "test-backend", Description: "Test backend"},
+	}
+	tasks3 := []task.Task{
+		{Name: "deploy-staging", Description: "Deploy to staging"},
+		{Name: "deploy-production", Description: "Deploy to production"},
 	}
 
-	result := config.GetDirectories()
-	expected := []string{""}
+	manager1 := NewMockManager("Frontend", tasks1)
+	manager2 := NewMockManager("Backend", tasks2)
+	manager3 := NewMockManager("Deployment", tasks3)
+	managers := []manager.Manager{manager1, manager2, manager3}
 
-	assert.Equal(t, expected, result, "Should return empty string when both are empty")
-	assert.Equal(t, len(expected), len(result), "Result should have expected length")
+	// Test fuzzy matching - "dep" should match "deploy-staging" in the third manager
+	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "dep")
+	require.NoError(t, err, "Should not return error when fuzzy match is found")
+	require.NotNil(t, resultManager, "Should return the manager that contains the matching task")
+	require.NotNil(t, resultTask, "Should return the found task")
+
+	assert.Equal(t, "Deployment", resultManager.GetTitle().Name, "Should return the third manager with fuzzy matching task")
+	assert.True(t, resultTask.Name == "deploy-staging" || resultTask.Name == "deploy-production",
+		"Should return one of the deploy tasks")
 }
 
-func TestManagerParseConfig_GetDirectories_SingleLevelDeep(t *testing.T) {
-	config := &manager.ManagerParseConfig{
-		CurrentDir: "/user/project",
-		RootDir:    "/user",
+func TestFindClosestTaskFromList_NoTaskFound(t *testing.T) {
+	tasks1 := []task.Task{
+		{Name: "build", Description: "Build the application"},
+		{Name: "test", Description: "Run tests"},
+	}
+	tasks2 := []task.Task{
+		{Name: "deploy", Description: "Deploy the application"},
+		{Name: "lint", Description: "Run linters"},
+	}
+	tasks3 := []task.Task{
+		{Name: "format", Description: "Format code"},
+		{Name: "clean", Description: "Clean build artifacts"},
 	}
 
-	result := config.GetDirectories()
-	expected := []string{"/user", "/user/project"}
+	manager1 := NewMockManager("Manager1", tasks1)
+	manager2 := NewMockManager("Manager2", tasks2)
+	manager3 := NewMockManager("Manager3", tasks3)
+	managers := []manager.Manager{manager1, manager2, manager3}
 
-	assert.Equal(t, expected, result, "Should handle single level nesting correctly")
-	assert.Equal(t, len(expected), len(result), "Result should have expected length")
+	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "nonexistent")
+	assert.Error(t, err, "Should return error when no task is found in any manager")
+	assert.Nil(t, resultManager, "Should return nil manager when no task is found")
+	assert.Nil(t, resultTask, "Should return nil task when no task is found")
 
-	// Verify order is correct
-	assert.Equal(t, "/user", result[0], "First directory should be root directory")
-	assert.Equal(t, "/user/project", result[len(result)-1], "Last directory should be current directory")
+	expectedError := "no task found for 'nonexistent'"
+	assert.Equal(t, expectedError, err.Error(), "Error message should match expected format")
 }
 
-func TestManagerParseConfig_GetDirectories_DeepNesting(t *testing.T) {
-	config := &manager.ManagerParseConfig{
-		CurrentDir: "/user/projects/myapp/src/components/ui",
-		RootDir:    "/user/projects",
+func TestFindClosestTaskFromList_EmptyManagersList(t *testing.T) {
+	managers := []manager.Manager{}
+
+	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "anything")
+	assert.Error(t, err, "Should return error when managers list is empty")
+	assert.Nil(t, resultManager, "Should return nil manager when managers list is empty")
+	assert.Nil(t, resultTask, "Should return nil task when managers list is empty")
+
+	expectedError := "no task found for 'anything'"
+	assert.Equal(t, expectedError, err.Error(), "Error message should match expected format")
+}
+
+func TestFindClosestTaskFromList_ManagerWithEmptyTasks(t *testing.T) {
+	tasks1 := []task.Task{} // Empty task list
+	tasks2 := []task.Task{
+		{Name: "deploy", Description: "Deploy the application"},
+		{Name: "lint", Description: "Run linters"},
 	}
 
-	result := config.GetDirectories()
-	expected := []string{"/user/projects", "/user/projects/myapp", "/user/projects/myapp/src", "/user/projects/myapp/src/components", "/user/projects/myapp/src/components/ui"}
+	manager1 := NewMockManager("EmptyManager", tasks1)
+	manager2 := NewMockManager("Manager2", tasks2)
+	managers := []manager.Manager{manager1, manager2}
 
-	assert.Equal(t, expected, result, "Should handle deep directory nesting correctly")
-	assert.Equal(t, len(expected), len(result), "Result should have expected length")
+	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "deploy")
+	require.NoError(t, err, "Should not return error when task is found in second manager")
+	require.NotNil(t, resultManager, "Should return the manager that contains the task")
+	require.NotNil(t, resultTask, "Should return the found task")
 
-	// Verify order is correct
-	assert.Equal(t, "/user/projects", result[0], "First directory should be root directory")
-	assert.Equal(t, "/user/projects/myapp/src/components/ui", result[len(result)-1], "Last directory should be current directory")
+	assert.Equal(t, "Manager2", resultManager.GetTitle().Name, "Should return the second manager with the task")
+	assert.Equal(t, "deploy", resultTask.Name, "Should return the correct task")
+}
+
+func TestFindClosestTaskFromList_ManagerWithListError(t *testing.T) {
+	tasks1 := []task.Task{
+		{Name: "build", Description: "Build the application"},
+	}
+	tasks2 := []task.Task{
+		{Name: "deploy", Description: "Deploy the application"},
+	}
+
+	manager1 := NewMockManager("ErrorManager", tasks1)
+	manager1.SetListError(fmt.Errorf("failed to list tasks"))
+	manager2 := NewMockManager("Manager2", tasks2)
+	managers := []manager.Manager{manager1, manager2}
+
+	// Even if first manager has an error, should find task in second manager
+	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "deploy")
+	require.NoError(t, err, "Should not return error when task is found in working manager")
+	require.NotNil(t, resultManager, "Should return the manager that contains the task")
+	require.NotNil(t, resultTask, "Should return the found task")
+
+	assert.Equal(t, "Manager2", resultManager.GetTitle().Name, "Should return the working manager")
+	assert.Equal(t, "deploy", resultTask.Name, "Should return the correct task")
 }

@@ -80,7 +80,7 @@ func TestParseJsManager(t *testing.T) {
 	tests := []struct {
 		name        string
 		testdataDir string
-		workspace   jsmanager.JsWorkspace
+		workspace   *jsmanager.JsWorkspace
 		wantNil     bool
 		wantError   bool
 		wantScripts int
@@ -88,7 +88,7 @@ func TestParseJsManager(t *testing.T) {
 		{
 			name:        "empty directory (no package.json)",
 			testdataDir: "empty",
-			workspace:   NewMockJsWorkspace("npm"),
+			workspace:   func() *jsmanager.JsWorkspace { w := jsmanager.JsWorkspace(NewMockJsWorkspace("npm")); return &w }(),
 			wantNil:     true,
 			wantError:   false,
 			wantScripts: 0,
@@ -96,7 +96,7 @@ func TestParseJsManager(t *testing.T) {
 		{
 			name:        "package.json without scripts",
 			testdataDir: "no-scripts",
-			workspace:   NewMockJsWorkspace("npm"),
+			workspace:   func() *jsmanager.JsWorkspace { w := jsmanager.JsWorkspace(NewMockJsWorkspace("npm")); return &w }(),
 			wantNil:     false,
 			wantError:   false,
 			wantScripts: 0,
@@ -104,7 +104,7 @@ func TestParseJsManager(t *testing.T) {
 		{
 			name:        "package.json with scripts",
 			testdataDir: "with-scripts",
-			workspace:   NewMockJsWorkspace("npm"),
+			workspace:   func() *jsmanager.JsWorkspace { w := jsmanager.JsWorkspace(NewMockJsWorkspace("npm")); return &w }(),
 			wantNil:     false,
 			wantError:   false,
 			wantScripts: 3,
@@ -138,7 +138,7 @@ func TestParseJsManager(t *testing.T) {
 
 			// Test GetTitle
 			title := manager.GetTitle()
-			assert.Equal(t, tt.workspace.Name(), title.Name, "Title name should match workspace name")
+			assert.Equal(t, (*tt.workspace).Name(), title.Name, "Title name should match workspace name")
 			assert.Contains(t, title.Description, "package.json", "Title description should mention package.json")
 		})
 	}
@@ -146,9 +146,10 @@ func TestParseJsManager(t *testing.T) {
 
 func TestJsManager_ListTasks(t *testing.T) {
 	testDir := filepath.Join("testdata", "with-scripts")
-	workspace := NewMockJsWorkspace("npm")
+	mockWorkspace := NewMockJsWorkspace("npm")
+	workspace := jsmanager.JsWorkspace(mockWorkspace)
 
-	manager, err := jsmanager.ParseJsManager(&testDir, workspace)
+	manager, err := jsmanager.ParseJsManager(&testDir, &workspace)
 	require.NoError(t, err, "ParseJsManager() should not return error")
 	require.NotNil(t, manager, "ParseJsManager() should return manager")
 
@@ -169,9 +170,10 @@ func TestJsManager_ListTasks(t *testing.T) {
 
 func TestJsManager_ExecuteTask(t *testing.T) {
 	testDir := filepath.Join("testdata", "with-scripts")
-	workspace := NewMockJsWorkspace("npm")
+	mockWorkspace := NewMockJsWorkspace("npm")
+	workspace := jsmanager.JsWorkspace(mockWorkspace)
 
-	manager, err := jsmanager.ParseJsManager(&testDir, workspace)
+	manager, err := jsmanager.ParseJsManager(&testDir, &workspace)
 	require.NoError(t, err, "ParseJsManager() should not return error")
 	require.NotNil(t, manager, "ParseJsManager() should return manager")
 
@@ -181,13 +183,13 @@ func TestJsManager_ExecuteTask(t *testing.T) {
 	}
 
 	// Clear any previous commands
-	workspace.ClearExecutedCommands()
+	mockWorkspace.ClearExecutedCommands()
 
 	// Execute the task
 	manager.ExecuteTask(testTask, "arg1", "arg2")
 
 	// Check that the command was executed
-	executedCmds := workspace.GetExecutedCommands()
+	executedCmds := mockWorkspace.GetExecutedCommands()
 	require.Len(t, executedCmds, 1, "Should have executed exactly one command")
 
 	// The command should be echo with the workspace name
@@ -221,9 +223,10 @@ func TestJsManager_GetTitle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testDir := filepath.Join("testdata", "with-scripts")
-			workspace := NewMockJsWorkspace(tt.workspaceName)
+			mockWorkspace := NewMockJsWorkspace(tt.workspaceName)
+			workspace := jsmanager.JsWorkspace(mockWorkspace)
 
-			manager, err := jsmanager.ParseJsManager(&testDir, workspace)
+			manager, err := jsmanager.ParseJsManager(&testDir, &workspace)
 			require.NoError(t, err, "ParseJsManager() should not return error")
 			require.NotNil(t, manager, "ParseJsManager() should return manager")
 
@@ -236,9 +239,10 @@ func TestJsManager_GetTitle(t *testing.T) {
 
 func TestJsManager_ExecuteTaskWithMultipleArgs(t *testing.T) {
 	testDir := filepath.Join("testdata", "with-scripts")
-	workspace := NewMockJsWorkspace("yarn")
+	mockWorkspace := NewMockJsWorkspace("yarn")
+	workspace := jsmanager.JsWorkspace(mockWorkspace)
 
-	manager, err := jsmanager.ParseJsManager(&testDir, workspace)
+	manager, err := jsmanager.ParseJsManager(&testDir, &workspace)
 	require.NoError(t, err, "ParseJsManager() should not return error")
 	require.NotNil(t, manager, "ParseJsManager() should return manager")
 
@@ -248,13 +252,13 @@ func TestJsManager_ExecuteTaskWithMultipleArgs(t *testing.T) {
 	}
 
 	// Clear any previous commands
-	workspace.ClearExecutedCommands()
+	mockWorkspace.ClearExecutedCommands()
 
 	// Execute the task with multiple arguments
 	manager.ExecuteTask(testTask, "--verbose", "--production", "extra-arg")
 
 	// Check that the command was executed
-	executedCmds := workspace.GetExecutedCommands()
+	executedCmds := mockWorkspace.GetExecutedCommands()
 	require.Len(t, executedCmds, 1, "Should have executed exactly one command")
 
 	// The command should be echo with the workspace name
@@ -264,9 +268,10 @@ func TestJsManager_ExecuteTaskWithMultipleArgs(t *testing.T) {
 
 func TestJsManager_ExecuteTaskNoArgs(t *testing.T) {
 	testDir := filepath.Join("testdata", "with-scripts")
-	workspace := NewMockJsWorkspace("pnpm")
+	mockWorkspace := NewMockJsWorkspace("pnpm")
+	workspace := jsmanager.JsWorkspace(mockWorkspace)
 
-	manager, err := jsmanager.ParseJsManager(&testDir, workspace)
+	manager, err := jsmanager.ParseJsManager(&testDir, &workspace)
 	require.NoError(t, err, "ParseJsManager() should not return error")
 	require.NotNil(t, manager, "ParseJsManager() should return manager")
 
@@ -276,13 +281,13 @@ func TestJsManager_ExecuteTaskNoArgs(t *testing.T) {
 	}
 
 	// Clear any previous commands
-	workspace.ClearExecutedCommands()
+	mockWorkspace.ClearExecutedCommands()
 
 	// Execute the task without arguments
 	manager.ExecuteTask(testTask)
 
 	// Check that the command was executed
-	executedCmds := workspace.GetExecutedCommands()
+	executedCmds := mockWorkspace.GetExecutedCommands()
 	require.Len(t, executedCmds, 1, "Should have executed exactly one command")
 
 	// The command should be echo with the workspace name

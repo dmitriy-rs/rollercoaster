@@ -5,6 +5,7 @@ import (
 	"path"
 	"slices"
 
+	"github.com/dmitriy-rs/rollercoaster/internal/config"
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
 	jsmanager "github.com/dmitriy-rs/rollercoaster/internal/manager/js"
@@ -14,7 +15,7 @@ import (
 func ParseManager(dir *string) ([]manager.Manager, error) {
 	managers := []manager.Manager{}
 
-	parseConfig := manager.ManagerParseConfig{
+	parseConfig := config.ParseConfig{
 		CurrentDir: *dir,
 		RootDir:    findClosestGitDir(dir),
 	}
@@ -27,7 +28,7 @@ func ParseManager(dir *string) ([]manager.Manager, error) {
 	directories := parseConfig.GetDirectories()
 	for _, dir := range directories {
 		if jsWorkspace != nil {
-			jsManager, err := jsmanager.ParseJsManager(&dir, *jsWorkspace)
+			jsManager, err := jsmanager.ParseJsManager(&dir, jsWorkspace)
 			if err != nil {
 				logger.Warning(err.Error())
 			} else if jsManager != nil {

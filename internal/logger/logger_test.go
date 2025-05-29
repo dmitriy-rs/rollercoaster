@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -35,6 +36,12 @@ func TestError(t *testing.T) {
 			message:  "",
 			err:      errors.New("test error"),
 			expected: "ERROR  test error",
+		},
+		{
+			name:     "error with empty message and nil error",
+			message:  "",
+			err:      nil,
+			expected: "ERROR  %!s(<nil>)",
 		},
 	}
 
@@ -81,33 +88,32 @@ func TestFatal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// We can't actually test os.Exit(1) in a unit test without special handling
-			// So we'll test the error output part only
-			// In a real scenario, you might use a wrapper or dependency injection
-
-			// Capture stderr
-			oldStderr := os.Stderr
-			r, w, _ := os.Pipe()
-			os.Stderr = w
-
-			// We need to test this in a subprocess or mock os.Exit
-			// For now, let's test the error formatting logic by calling Error directly
-			if tt.err == nil {
-				logger.Error("An unknown error occurred", nil)
-			} else {
-				logger.Error("", tt.err)
+			if os.Getenv("BE_CRASHER") == "1" {
+				logger.Fatal(tt.err)
+				return
 			}
 
-			_ = w.Close()
-			os.Stderr = oldStderr
+			// Test Fatal function by running it in a subprocess
+			cmd := exec.Command(os.Args[0], "-test.run=TestFatal/"+tt.name)
+			cmd.Env = append(os.Environ(), "BE_CRASHER=1")
 
-			var buf bytes.Buffer
-			_, _ = buf.ReadFrom(r)
-			output := strings.TrimSpace(buf.String())
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
 
-			// Remove ANSI color codes for comparison
-			cleanOutput := removeANSICodes(output)
-			assert.Contains(t, cleanOutput, tt.expected, "Fatal output should contain expected message")
+			err := cmd.Run()
+
+			// Fatal should exit with code 1
+			if e, ok := err.(*exec.ExitError); ok && !e.Success() {
+				// Check that it exited with status 1
+				assert.Equal(t, 1, e.ExitCode(), "Fatal should exit with code 1")
+
+				// Check stderr output
+				output := strings.TrimSpace(stderr.String())
+				cleanOutput := removeANSICodes(output)
+				assert.Contains(t, cleanOutput, tt.expected, "Fatal output should contain expected message")
+			} else {
+				t.Fatalf("process ran with err %v, want exit status 1", err)
+			}
 		})
 	}
 }
@@ -127,6 +133,16 @@ func TestInfo(t *testing.T) {
 			name:     "empty info message",
 			message:  "",
 			expected: "INFO",
+		},
+		{
+			name:     "info with special characters",
+			message:  "test with special chars: !@#$%^&*()",
+			expected: "INFO  test with special chars: !@#$%^&*()",
+		},
+		{
+			name:     "info with newlines",
+			message:  "test\nwith\nnewlines",
+			expected: "INFO  test\nwith\nnewlines",
 		},
 	}
 
@@ -168,6 +184,11 @@ func TestWarning(t *testing.T) {
 			name:     "empty warning message",
 			message:  "",
 			expected: "WARN",
+		},
+		{
+			name:     "warning with special characters",
+			message:  "warning with special chars: !@#$%^&*()",
+			expected: "WARN  warning with special chars: !@#$%^&*()",
 		},
 	}
 
@@ -214,6 +235,21 @@ func TestDebug(t *testing.T) {
 			name:     "debug with no messages",
 			messages: []any{},
 			expected: "DEBG  []",
+		},
+		{
+			name:     "debug with nil value",
+			messages: []any{nil},
+			expected: "DEBG  [<nil>]",
+		},
+		{
+			name:     "debug with mixed types",
+			messages: []any{"string", 42, 3.14, true, nil},
+			expected: "DEBG  [string %!s(int=42) %!s(float64=3.14) %!s(bool=true) <nil>]",
+		},
+		{
+			name:     "debug with struct",
+			messages: []any{struct{ Name string }{"test"}},
+			expected: "DEBG  [{test}]",
 		},
 	}
 

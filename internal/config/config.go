@@ -5,11 +5,45 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
+	"strings"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 
 	"github.com/goccy/go-yaml"
 )
+
+type ParseConfig struct {
+	CurrentDir string
+	RootDir    string
+}
+
+func (c *ParseConfig) GetDirectories() []string {
+	currentDir := strings.TrimSuffix(c.CurrentDir, "/")
+	rootDir := strings.TrimSuffix(c.RootDir, "/")
+
+	if rootDir == "" {
+		return []string{currentDir}
+	}
+	if currentDir == "" {
+		// Maybe it's wrong, but we'll try to parse the root dir
+		return []string{rootDir}
+	}
+	if currentDir == rootDir {
+		return []string{rootDir}
+	}
+
+	parsedDirectories := []string{}
+	for dir := currentDir; dir != rootDir; dir = path.Dir(dir) {
+		parsedDirectories = append(parsedDirectories, dir)
+	}
+	parsedDirectories = append(parsedDirectories, rootDir)
+	slices.Reverse(parsedDirectories)
+
+	fmt.Println(parsedDirectories)
+
+	return parsedDirectories
+}
 
 type ConfigFile struct {
 	Filename string

@@ -3,6 +3,7 @@ package parser_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/manager/parser"
@@ -89,7 +90,7 @@ func TestParseManager(t *testing.T) {
 				}
 				err := os.MkdirAll(gitDir, 0755)
 				require.NoError(t, err, "Failed to create .git directory")
-				defer os.RemoveAll(gitDir)
+				defer os.RemoveAll(gitDir) //nolint:errcheck
 			}
 
 			// Parse managers
@@ -111,7 +112,7 @@ func TestParseManager(t *testing.T) {
 
 			for _, manager := range managers {
 				title := manager.GetTitle()
-				if title.Name == "pnpm" || title.Name == "npm" || title.Name == "yarn" {
+				if strings.Contains(title.Name, "pnpm") || title.Name == "npm" || title.Name == "yarn" {
 					hasJsManager = true
 				}
 				if title.Name == "task" {
@@ -132,7 +133,7 @@ func TestParseManagerEmptyDirectory(t *testing.T) {
 	gitDir := filepath.Join(testDir, ".git")
 	err := os.MkdirAll(gitDir, 0755)
 	require.NoError(t, err, "Failed to create .git directory")
-	defer os.RemoveAll(gitDir)
+	defer os.RemoveAll(gitDir) //nolint:errcheck
 
 	managers, err := parser.ParseManager(&testDir)
 
@@ -189,7 +190,7 @@ func TestFindClosestGitDir(t *testing.T) {
 				gitDir := filepath.Join(testDir, ".git")
 				err := os.MkdirAll(gitDir, 0755)
 				require.NoError(t, err, "Failed to create .git directory")
-				defer os.RemoveAll(gitDir)
+				defer os.RemoveAll(gitDir) //nolint:errcheck
 			}
 
 			// We need to test the findClosestGitDir function indirectly through ParseManager

@@ -66,7 +66,7 @@ func TestParsePnpmWorkspace(t *testing.T) {
 			}
 
 			require.NotNil(t, workspace, "ParsePnpmWorkspace() should return workspace for %s", tt.testdataDir)
-			assert.Equal(t, "pnpm", workspace.Name(), "ParsePnpmWorkspace() workspace name should be 'pnpm'")
+			assert.Contains(t, workspace.Name(), "pnpm", "ParsePnpmWorkspace() workspace name should be 'pnpm'")
 		})
 	}
 }

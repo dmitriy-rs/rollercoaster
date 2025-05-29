@@ -2,10 +2,7 @@ package manager
 
 import (
 	"fmt"
-	"path"
-	"slices"
 	"sort"
-	"strings"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
@@ -22,38 +19,6 @@ type Manager interface {
 type Title struct {
 	Name        string
 	Description string
-}
-
-type ManagerParseConfig struct {
-	CurrentDir string
-	RootDir    string
-}
-
-func (c *ManagerParseConfig) GetDirectories() []string {
-	currentDir := strings.TrimSuffix(c.CurrentDir, "/")
-	rootDir := strings.TrimSuffix(c.RootDir, "/")
-
-	if rootDir == "" {
-		return []string{currentDir}
-	}
-	if currentDir == "" {
-		// Maybe it's wrong, but we'll try to parse the root dir
-		return []string{rootDir}
-	}
-	if currentDir == rootDir {
-		return []string{rootDir}
-	}
-
-	parsedDirectories := []string{}
-	for dir := currentDir; dir != rootDir; dir = path.Dir(dir) {
-		parsedDirectories = append(parsedDirectories, dir)
-	}
-	parsedDirectories = append(parsedDirectories, rootDir)
-	slices.Reverse(parsedDirectories)
-
-	fmt.Println(parsedDirectories)
-
-	return parsedDirectories
 }
 
 func FindClosestTaskFromList(managers []Manager, arg string) (Manager, *task.Task, error) {

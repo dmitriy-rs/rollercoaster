@@ -7,7 +7,7 @@ import (
 )
 
 type JsManager struct {
-	workspace JsWorkspace
+	workspace *JsWorkspace
 	config    packageJsonConfig
 	filename  string
 }
@@ -18,7 +18,7 @@ type packageJsonConfig struct {
 
 const packageJsonFilename = "package.json"
 
-func ParseJsManager(dir *string, workspace JsWorkspace) (*JsManager, error) {
+func ParseJsManager(dir *string, workspace *JsWorkspace) (*JsManager, error) {
 	packageJsonFile := config.FindInDirectory(dir, packageJsonFilename)
 	if packageJsonFile == nil {
 		return nil, nil
@@ -48,13 +48,13 @@ func (m *JsManager) ListTasks() ([]task.Task, error) {
 }
 
 func (m *JsManager) ExecuteTask(task *task.Task, args ...string) {
-	cmd := m.workspace.Cmd()
+	cmd := (*m.workspace).Cmd()
 	manager.CommandExecute(cmd, args...)
 }
 
 func (m *JsManager) GetTitle() manager.Title {
 	return manager.Title{
-		Name:        m.workspace.Name(),
+		Name:        (*m.workspace).Name(),
 		Description: "task runner. parsed from " + m.filename,
 	}
 }

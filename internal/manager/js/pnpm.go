@@ -43,7 +43,14 @@ func ParsePnpmWorkspace(dir *string) (*PnpmWorkspace, error) {
 }
 
 func (m *PnpmWorkspace) Name() string {
-	return "pnpm"
+	switch m.version {
+	case 10:
+		return "pnpm@10+"
+	case 9:
+		return "pnpm@9+"
+	default:
+		return "pnpm"
+	}
 }
 
 func (m *PnpmWorkspace) Cmd() *exec.Cmd {
