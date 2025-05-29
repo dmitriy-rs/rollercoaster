@@ -32,16 +32,25 @@ func ParseJsWorkspace(dir *string) (*JsWorkspace, error) {
 	if err != nil {
 		logger.Warning(err.Error())
 	}
+	if pnpmWorkspace != nil {
+		workspaces = append(workspaces, pnpmWorkspace)
+	}
+
 	yarnWorkspace, err := ParseYarnWorkspace(dir)
 	if err != nil {
 		logger.Warning(err.Error())
 	}
+	if yarnWorkspace != nil {
+		workspaces = append(workspaces, yarnWorkspace)
+	}
+
 	npmWorkspace, err := ParseNpmWorkspace(dir)
 	if err != nil {
 		logger.Warning(err.Error())
 	}
-
-	workspaces = append(workspaces, pnpmWorkspace, yarnWorkspace, npmWorkspace)
+	if npmWorkspace != nil {
+		workspaces = append(workspaces, npmWorkspace)
+	}
 
 	if len(workspaces) == 0 {
 		return nil, nil

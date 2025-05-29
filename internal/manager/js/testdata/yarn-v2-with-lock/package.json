@@ -1,0 +1,7 @@
+{
+  "name": "test-yarn-v2-project",
+  "version": "1.0.0",
+  "dependencies": {
+    "express": "^4.18.0"
+  }
+} 

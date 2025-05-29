@@ -27,9 +27,9 @@ func ParsePnpmWorkspace(dir *string) (*PnpmWorkspace, error) {
 		return nil, nil
 	}
 
+	firstLine = strings.TrimSpace(firstLine)
 	version := strings.TrimPrefix(firstLine, "lockfileVersion: '")
 	version = strings.TrimSuffix(version, "'")
-	version = strings.TrimSpace(version)
 
 	switch version {
 	case "9.0":
