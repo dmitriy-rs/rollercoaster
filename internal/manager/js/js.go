@@ -1,30 +1,15 @@
 package jsmanager
 
 import (
-	"fmt"
-	"os/exec"
-	"strings"
-
 	configfile "github.com/dmitriy-rs/rollercoaster/internal/configFile"
-	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
 )
 
 type JsManager struct {
-	manager  internalManager
-	config   packageJsonConfig
-	filename string
-}
-
-type internalManager interface {
-	Name() string
-	Cmd() *exec.Cmd
-	
-	RunCmd() *exec.Cmd
-	InstallCmd() *exec.Cmd
-	AddCmd() *exec.Cmd
-	RemoveCmd() *exec.Cmd
+	workspace JsWorkspace
+	config    packageJsonConfig
+	filename  string
 }
 
 type packageJsonConfig struct {
@@ -33,7 +18,7 @@ type packageJsonConfig struct {
 
 const packageJsonFilename = "package.json"
 
-func ParseJsManager(dir *string) (*JsManager, error) {
+func ParseJsManager(dir *string, workspace JsWorkspace) (*JsManager, error) {
 	packageJsonFile := configfile.FindInDirectory(dir, packageJsonFilename)
 	if packageJsonFile == nil {
 		return nil, nil
@@ -43,42 +28,11 @@ func ParseJsManager(dir *string) (*JsManager, error) {
 		return nil, err
 	}
 	manager := &JsManager{
-		config:   config,
-		filename: packageJsonFilename,
-		manager:  nil,
+		config:    config,
+		filename:  packageJsonFilename,
+		workspace: workspace,
 	}
 
-	managers := []internalManager{}
-
-	pnpmManager, err := ParsePnpmManager(dir)
-	if err != nil {
-		logger.Warning(err.Error())
-	}
-	yarnManager, err := ParseYarnManager(dir)
-	if err != nil {
-		logger.Warning(err.Error())
-	}
-	npmManager, err := ParseNpmManager(dir)
-	if err != nil {
-		logger.Warning(err.Error())
-	}
-
-	managers = append(managers, pnpmManager, yarnManager, npmManager)
-
-	if len(managers) == 0 {
-		return nil, fmt.Errorf("no package manager found")
-	}
-
-	if len(managers) > 1 {
-		formattedManagers := strings.Builder{}
-		for _, manager := range managers {
-			formattedManagers.WriteString(manager.Name())
-			formattedManagers.WriteString(", ")
-		}
-		return nil, fmt.Errorf("multiple package managers found: %s", formattedManagers.String())
-	}
-
-	manager.manager = managers[0]
 	return manager, nil
 }
 
@@ -94,13 +48,13 @@ func (m *JsManager) ListTasks() ([]task.Task, error) {
 }
 
 func (m *JsManager) ExecuteTask(task *task.Task, args ...string) {
-	cmd := m.manager.Cmd()
+	cmd := m.workspace.Cmd()
 	manager.CommandExecute(cmd, args...)
 }
 
 func (m *JsManager) GetTitle() manager.Title {
 	return manager.Title{
-		Name:        m.manager.Name(),
+		Name:        m.workspace.Name(),
 		Description: "task runner. parsed from " + m.filename,
 	}
 }

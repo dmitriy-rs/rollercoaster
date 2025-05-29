@@ -9,13 +9,13 @@ import (
 	"strings"
 )
 
-type YarnManager struct {
+type YarnWorkspace struct {
 	version int
 }
 
 const yarnLockFilename = "yarn.lock"
 
-func ParseYarnManager(dir *string) (*YarnManager, error) {
+func ParseYarnWorkspace(dir *string) (*YarnWorkspace, error) {
 	yarnLockFile, err := os.OpenFile(path.Join(*dir, yarnLockFilename), os.O_RDONLY, 0644)
 	if err != nil {
 		return nil, nil
@@ -30,29 +30,29 @@ func ParseYarnManager(dir *string) (*YarnManager, error) {
 		}
 	}
 
-	return &YarnManager{version: 1}, nil
+	return &YarnWorkspace{version: 1}, nil
 }
 
-func (m *YarnManager) Name() string {
+func (m *YarnWorkspace) Name() string {
 	return "yarn"
 }
 
-func (m *YarnManager) Cmd() *exec.Cmd {
+func (m *YarnWorkspace) Cmd() *exec.Cmd {
 	return exec.Command("yarn")
 }
 
-func (m *YarnManager) InstallCmd() *exec.Cmd {
+func (m *YarnWorkspace) InstallCmd() *exec.Cmd {
 	return exec.Command("yarn", "install")
 }
 
-func (m *YarnManager) RunCmd() *exec.Cmd {
+func (m *YarnWorkspace) RunCmd() *exec.Cmd {
 	return exec.Command("yarn", "run")
 }
 
-func (m *YarnManager) AddCmd() *exec.Cmd {
+func (m *YarnWorkspace) AddCmd() *exec.Cmd {
 	return exec.Command("yarn", "add")
 }
 
-func (m *YarnManager) RemoveCmd() *exec.Cmd {
+func (m *YarnWorkspace) RemoveCmd() *exec.Cmd {
 	return exec.Command("yarn", "remove")
 }

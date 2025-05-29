@@ -6,39 +6,39 @@ import (
 	"path"
 )
 
-type NpmManager struct {
+type NpmWorkspace struct {
 }
 
 const npmLockFilename = "package-lock.json"
 
-func ParseNpmManager(dir *string) (*NpmManager, error) {
+func ParseNpmWorkspace(dir *string) (*NpmWorkspace, error) {
 	packageLockFile, err := os.Stat(path.Join(*dir, npmLockFilename))
 	if err != nil || packageLockFile.IsDir() {
 		return nil, nil
 	}
-	return &NpmManager{}, nil
+	return &NpmWorkspace{}, nil
 }
 
-func (m *NpmManager) Name() string {
+func (m *NpmWorkspace) Name() string {
 	return "npm"
 }
 
-func (m *NpmManager) Cmd() *exec.Cmd {
+func (m *NpmWorkspace) Cmd() *exec.Cmd {
 	return exec.Command("npm")
 }
 
-func (m *NpmManager) InstallCmd() *exec.Cmd {
+func (m *NpmWorkspace) InstallCmd() *exec.Cmd {
 	return exec.Command("npm", "install")
 }
 
-func (m *NpmManager) RunCmd() *exec.Cmd {
+func (m *NpmWorkspace) RunCmd() *exec.Cmd {
 	return exec.Command("npm", "run")
 }
 
-func (m *NpmManager) AddCmd() *exec.Cmd {
+func (m *NpmWorkspace) AddCmd() *exec.Cmd {
 	return exec.Command("npm", "i")
 }
 
-func (m *NpmManager) RemoveCmd() *exec.Cmd {
+func (m *NpmWorkspace) RemoveCmd() *exec.Cmd {
 	return exec.Command("npm", "uninstall")
 }

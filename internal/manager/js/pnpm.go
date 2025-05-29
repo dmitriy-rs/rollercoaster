@@ -9,13 +9,13 @@ import (
 	"strings"
 )
 
-type PnpmManager struct {
+type PnpmWorkspace struct {
 	version int
 }
 
 const pnpmLockFilename = "pnpm-lock.yaml"
 
-func ParsePnpmManager(dir *string) (*PnpmManager, error) {
+func ParsePnpmWorkspace(dir *string) (*PnpmWorkspace, error) {
 	pnpmLockFile, err := os.OpenFile(path.Join(*dir, pnpmLockFilename), os.O_RDONLY, 0644)
 	if err != nil {
 		return nil, nil
@@ -33,35 +33,35 @@ func ParsePnpmManager(dir *string) (*PnpmManager, error) {
 
 	switch version {
 	case "9.0":
-		return &PnpmManager{version: 10}, nil
+		return &PnpmWorkspace{version: 10}, nil
 	case "6.0":
-		return &PnpmManager{version: 9}, nil
+		return &PnpmWorkspace{version: 9}, nil
 	default:
 		return nil, fmt.Errorf("unsupported pnpm lockfile version: %s", version)
 	}
 
 }
 
-func (m *PnpmManager) Name() string {
+func (m *PnpmWorkspace) Name() string {
 	return "pnpm"
 }
 
-func (m *PnpmManager) Cmd() *exec.Cmd {
+func (m *PnpmWorkspace) Cmd() *exec.Cmd {
 	return exec.Command("pnpm")
 }
 
-func (m *PnpmManager) RunCmd() *exec.Cmd {
+func (m *PnpmWorkspace) RunCmd() *exec.Cmd {
 	return exec.Command("pnpm", "run")
 }
 
-func (m *PnpmManager) InstallCmd() *exec.Cmd {
+func (m *PnpmWorkspace) InstallCmd() *exec.Cmd {
 	return exec.Command("pnpm", "install")
 }
 
-func (m *PnpmManager) AddCmd() *exec.Cmd {
+func (m *PnpmWorkspace) AddCmd() *exec.Cmd {
 	return exec.Command("pnpm", "add")
 }
 
-func (m *PnpmManager) RemoveCmd() *exec.Cmd {
+func (m *PnpmWorkspace) RemoveCmd() *exec.Cmd {
 	return exec.Command("pnpm", "remove")
 }
