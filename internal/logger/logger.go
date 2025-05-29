@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+var MODE = "DEV"
+
 var (
 	errStyle = lipgloss.NewStyle().
 			Background(lipgloss.Color("#fe5069")).
@@ -14,7 +16,7 @@ var (
 			Bold(true).
 			Italic(true)
 	infoStyle = lipgloss.NewStyle().
-			Background(lipgloss.Color("#0f69ff")).
+			Background(lipgloss.Color("#5a7ba8")).
 			Foreground(lipgloss.Color("#ffffff")).
 			Bold(true).
 			Italic(true)
@@ -64,6 +66,8 @@ func Warning(message string) {
 	_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", warnMessageChip, message)
 }
 
-func Debug(message any) {
-	_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", debugMessageChip, message)
+func Debug(message ...any) {
+	if MODE == "DEV" {
+		_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", debugMessageChip, message)
+	}
 }

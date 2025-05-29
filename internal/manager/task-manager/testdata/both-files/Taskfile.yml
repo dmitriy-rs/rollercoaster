@@ -1,0 +1,17 @@
+version: '3'
+
+tasks:
+  build:
+    desc: "Build the application"
+    cmds:
+      - echo "Building the application"
+
+  test:
+    desc: "Run tests"
+    cmds:
+      - echo "Running tests"
+
+  lint:
+    desc: "Run linters"
+    cmds:
+      - echo "Running linters"

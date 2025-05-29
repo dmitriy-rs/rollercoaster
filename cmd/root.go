@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"os"
-	"path"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
+	"github.com/dmitriy-rs/rollercoaster/internal/manager/parser"
 	"github.com/dmitriy-rs/rollercoaster/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -15,7 +15,6 @@ var rootCmd = &cobra.Command{
 	Short:         "rollercoaster is a cli tool for running tasks/scripts in current directory",
 	Long:          "rollercoaster is a cli tool for running tasks/scripts in current directory.\nIt allows you to run it without knowing the name of the manager and script.",
 	SilenceErrors: false,
-	Args:          cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := execute(cmd, args); err != nil {
 			os.Exit(1)
@@ -25,7 +24,7 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		logger.Error("Oops. An error occurred while executing rollercoaster", err)
+		// logger.Error("Oops. An error occurred while executing rollercoaster", err)
 		os.Exit(1)
 	}
 }
@@ -37,56 +36,26 @@ func execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	taskManager, err := manager.FindManager(&dir)
+	managers, err := parser.ParseManager(&dir)
 	if err != nil {
 		logger.Error("", err)
 		return err
 	}
-
-	logger.Debug("Current working directory: " + dir)
-
-	if taskManager == nil {
-		gitDir := findClosestGitDir(&dir)
-		logger.Debug("Current git working directory: " + gitDir)
-		if gitDir == "" {
-			logger.Warning("Could not find a task manager in the current directory or its parents")
-			return nil
-		}
-		taskManager, err = manager.FindManager(&gitDir)
-		if err != nil {
-			logger.Error("", err)
-			return err
-		}
+	if len(managers) == 0 {
+		return nil
 	}
 
 	if len(args) == 0 {
-		return ui.RenderTaskList(taskManager)
+		return ui.RenderTaskList(managers)
 	} else {
-		err = manager.ExecuteClosestTask(taskManager, args[0])
+		commandName := args[0]
+		commandArgs := args[1:]
+		taskManager, closestTask, err := manager.FindClosestTaskFromList(managers, commandName)
 		if err != nil {
-			logger.Warning("No tasks found")
-			return ui.RenderTaskList(taskManager)
+			logger.Info("No tasks found")
+			return ui.RenderTaskList(managers)
 		}
+		taskManager.ExecuteTask(closestTask, commandArgs...)
 		return nil
 	}
-}
-
-func findClosestGitDir(dir *string) string {
-	if dir == nil || *dir == "" {
-		return ""
-	}
-	currentDir := *dir
-	for {
-		gitPath := path.Join(currentDir, ".git")
-		info, err := os.Stat(gitPath)
-		if err == nil && info.IsDir() {
-			return currentDir
-		}
-		parentDir := path.Dir(currentDir)
-		if parentDir == currentDir {
-			break
-		}
-		currentDir = parentDir
-	}
-	return ""
 }

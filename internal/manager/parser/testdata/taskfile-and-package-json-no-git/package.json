@@ -1,0 +1,13 @@
+{
+  "name": "test-combined-no-git",
+  "version": "1.0.0",
+  "description": "Test package with both taskfile and package.json without git directory",
+  "main": "index.js",
+  "scripts": {
+    "start": "echo 'Starting combined project without git'",
+    "dev": "echo 'Running in development mode without git'"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21"
+  }
+} 

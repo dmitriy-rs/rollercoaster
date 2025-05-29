@@ -1,0 +1,12 @@
+version: '3'
+
+tasks:
+  local-build:
+    desc: "Local build task"
+    cmds:
+      - echo "Running local build"
+
+  local-test:
+    desc: "Local test task"
+    cmds:
+      - echo "Running local test" 

@@ -1,0 +1,42 @@
+{
+  "name": "example-project",
+  "version": "1.2.3",
+  "description": "An example Node.js project for testing",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "jest",
+    "build": "webpack --mode production",
+    "lint": "eslint src/",
+    "format": "prettier --write src/"
+  },
+  "keywords": [
+    "example",
+    "testing",
+    "node"
+  ],
+  "author": "Test Author",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "lodash": "^4.17.21",
+    "axios": "^1.4.0",
+    "moment": "^2.29.4"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "nodemon": "^2.0.22",
+    "eslint": "^8.42.0",
+    "prettier": "^2.8.8",
+    "webpack": "^5.88.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/example/example-project.git"
+  }
+} 

@@ -21,7 +21,20 @@ var (
 				Align(lipgloss.Right)
 )
 
-func RenderTaskList(manager manager.Manager) error {
+func RenderTaskList(managers []manager.Manager) error {
+	println(tasksTitleStyle.Underline(false).Render("Choose a task to run:"))
+
+	for _, manager := range managers {
+		err := renderManager(manager)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func renderManager(manager manager.Manager) error {
 	tasks, err := manager.ListTasks()
 	if err != nil {
 		return err
@@ -34,8 +47,9 @@ func RenderTaskList(manager manager.Manager) error {
 
 	maxSpaces := getMaxSpaces(tasks)
 
-	println(tasksTitleStyle.Underline(false).Render("Choose a task to run:"))
-	println("\n" + manager.GetTitle())
+	title := manager.GetTitle()
+	println("\n" + TaskNameStyle.Render(title.Name) + " " + TextColor.Render(title.Description))
+
 	println("\n" + tasksTitleStyle.Render("Name") + renderSpaces(4, maxSpaces) + tasksTitleStyle.Render("Description"))
 
 	for _, t := range tasks {

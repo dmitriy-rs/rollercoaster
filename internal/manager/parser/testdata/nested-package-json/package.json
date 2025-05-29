@@ -1,0 +1,14 @@
+{
+  "name": "test-monorepo",
+  "version": "1.0.0",
+  "description": "Test monorepo with nested packages",
+  "private": true,
+  "scripts": {
+    "build": "echo 'Building monorepo'",
+    "test": "echo 'Testing monorepo'",
+    "dev": "echo 'Running monorepo in dev mode'"
+  },
+  "workspaces": [
+    "subdir"
+  ]
+} 

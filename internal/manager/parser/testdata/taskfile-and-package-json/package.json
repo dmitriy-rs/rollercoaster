@@ -1,0 +1,13 @@
+{
+  "name": "test-combined",
+  "version": "1.0.0",
+  "description": "Test package with both taskfile and package.json",
+  "main": "index.js",
+  "scripts": {
+    "start": "echo 'Starting combined project'",
+    "dev": "echo 'Running in development mode'"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21"
+  }
+} 

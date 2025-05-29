@@ -1,0 +1,44 @@
+package jsmanager
+
+import (
+	"os"
+	"os/exec"
+	"path"
+)
+
+type NpmWorkspace struct {
+}
+
+const npmLockFilename = "package-lock.json"
+
+func ParseNpmWorkspace(dir *string) (*NpmWorkspace, error) {
+	packageLockFile, err := os.Stat(path.Join(*dir, npmLockFilename))
+	if err != nil || packageLockFile.IsDir() {
+		return nil, nil
+	}
+	return &NpmWorkspace{}, nil
+}
+
+func (m *NpmWorkspace) Name() string {
+	return "npm"
+}
+
+func (m *NpmWorkspace) Cmd() *exec.Cmd {
+	return exec.Command("npm")
+}
+
+func (m *NpmWorkspace) InstallCmd() *exec.Cmd {
+	return exec.Command("npm", "install")
+}
+
+func (m *NpmWorkspace) RunCmd() *exec.Cmd {
+	return exec.Command("npm", "run")
+}
+
+func (m *NpmWorkspace) AddCmd() *exec.Cmd {
+	return exec.Command("npm", "i")
+}
+
+func (m *NpmWorkspace) RemoveCmd() *exec.Cmd {
+	return exec.Command("npm", "uninstall")
+}

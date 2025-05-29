@@ -1,0 +1,12 @@
+version: '3'
+
+tasks:
+  global-build:
+    desc: "Global build task"
+    cmds:
+      - echo "Running global build"
+
+  global-test:
+    desc: "Global test task"
+    cmds:
+      - echo "Running global test" 

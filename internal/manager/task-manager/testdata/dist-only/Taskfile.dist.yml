@@ -1,0 +1,12 @@
+version: '3'
+
+tasks:
+  install:
+    desc: "Install dependencies"
+    cmds:
+      - echo "Installing dependencies"
+
+  clean:
+    desc: "Clean build artifacts"
+    cmds:
+      - echo "Cleaning build artifacts"

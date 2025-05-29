@@ -1,0 +1,9 @@
+{
+  "name": "invalid-json",
+  "version": "1.0.0",
+  "description": "This JSON file has syntax errors"
+  // Missing comma above and this comment is invalid in JSON
+  "scripts": {
+    "test": "echo test"
+  }
+} 

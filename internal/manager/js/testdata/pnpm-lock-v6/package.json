@@ -1,0 +1,7 @@
+{
+  "name": "test-pnpm-v6-project",
+  "version": "1.0.0",
+  "dependencies": {
+    "vue": "^3.0.0"
+  }
+} 

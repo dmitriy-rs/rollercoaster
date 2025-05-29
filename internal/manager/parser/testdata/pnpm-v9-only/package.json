@@ -1,0 +1,17 @@
+{
+  "name": "test-pnpm-v9",
+  "version": "1.0.0",
+  "description": "Test package with pnpm v9",
+  "main": "index.js",
+  "scripts": {
+    "start": "echo 'Starting with pnpm'",
+    "test": "echo 'Running tests with pnpm'",
+    "build": "echo 'Building with pnpm'"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0"
+  }
+} 

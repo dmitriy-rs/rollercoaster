@@ -10,28 +10,32 @@ import (
 )
 
 type Manager interface {
-	GetTitle() string
+	GetTitle() Title
 
 	ListTasks() ([]task.Task, error)
-	ExecuteTask(name string)
+	ExecuteTask(task *task.Task, args ...string)
 }
 
-func FindManager(dir *string) (Manager, error) {
-	manager, err := ParseTaskManager(dir)
-	if err != nil {
-		return nil, err
-	}
-	if manager != nil {
-		return manager, nil
-	}
-	return nil, nil
+type Title struct {
+	Name        string
+	Description string
 }
 
-func ExecuteClosestTask(manager Manager, arg string) error {
+func FindClosestTaskFromList(managers []Manager, arg string) (Manager, *task.Task, error) {
+	for _, manager := range managers {
+		task, _ := FindClosestTask(manager, arg)
+		if task != nil {
+			return manager, task, nil
+		}
+	}
+	return nil, nil, fmt.Errorf("no task found for '%s'", arg)
+}
+
+func FindClosestTask(manager Manager, arg string) (*task.Task, error) {
 	tasks, err := manager.ListTasks()
 	if err != nil {
 		logger.Error("Failed to list tasks", err)
-		return err
+		return nil, err
 	}
 
 	logger.Debug(fmt.Sprintf("Found tasks: %s", tasks))
@@ -47,8 +51,14 @@ func ExecuteClosestTask(manager Manager, arg string) error {
 	logger.Debug(fmt.Sprintf("Fuzzy matches for '%s': %v", arg, matches))
 
 	if len(matches) != 0 {
-		manager.ExecuteTask(matches[0].Target)
-		return nil
+		var matchedTask *task.Task
+		for _, task := range tasks {
+			if task.Name == matches[0].Target {
+				matchedTask = &task
+				break
+			}
+		}
+		return matchedTask, nil
 	}
-	return fmt.Errorf("no task found for '%s'", arg)
+	return nil, fmt.Errorf("no task found for '%s'", arg)
 }
