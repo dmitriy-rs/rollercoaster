@@ -18,3 +18,15 @@ tasks:
       - go test -race -covermode=atomic -coverprofile=coverage.out ./...
     desc: "Run tests"
     silent: true
+
+  build-dev:
+    cmds:
+      - go build -o rollercoaster ./main.go
+    desc: "Build the binary"
+    silent: true
+
+  build:
+    cmds:
+      - go build -ldflags "-X github.com/dmitriy-rs/rollercoaster/internal/logger.MODE=PROD" -o rollercoaster ./main.go 
+    desc: "Build the binary for production"
+    silent: true
