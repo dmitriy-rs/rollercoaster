@@ -79,13 +79,14 @@ func TestParseManager(t *testing.T) {
 			var gitDir string
 			if tt.createGitDir {
 				// For nested scenarios, create .git at the root
-				if tt.testdataDir == "nested-package-json/subdir" || tt.testdataDir == "nested-package-json" {
+				switch tt.testdataDir {
+				case "nested-package-json/subdir", "nested-package-json":
 					gitDir = filepath.Join("testdata", "nested-package-json", ".git")
-				} else if tt.testdataDir == "nested-taskfile/subdir" {
+				case "nested-taskfile/subdir":
 					gitDir = filepath.Join("testdata", "nested-taskfile", ".git")
-				} else if tt.testdataDir == "nested-with-js-workspaces/subproject" {
+				case "nested-with-js-workspaces/subproject":
 					gitDir = filepath.Join("testdata", "nested-with-js-workspaces", ".git")
-				} else {
+				default:
 					gitDir = filepath.Join(testDir, ".git")
 				}
 				err := os.MkdirAll(gitDir, 0755)
