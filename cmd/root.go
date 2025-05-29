@@ -11,7 +11,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:           "rollercoaster [TASK_NAME|PARTIAL_TASK_NAME]",
+	Use:           "rollercoaster [TASK_NAME|TASK_NAME_QUERY]",
 	Short:         "rollercoaster is a cli tool for running tasks/scripts in current directory",
 	Long:          "rollercoaster is a cli tool for running tasks/scripts in current directory.\nIt allows you to run it without knowing the name of the manager and script.",
 	SilenceErrors: false,
