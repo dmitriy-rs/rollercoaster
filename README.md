@@ -28,7 +28,7 @@ WIP
 
 ### After initial release
 
-[] Investigate into shell integration
+- [] Investigate into shell integration
 [] Integrate with zsh shell and test usability
 [] Add README for shell usage
 [] Global command to enable/disable shell intergation
