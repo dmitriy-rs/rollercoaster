@@ -10,7 +10,7 @@ WIP
 
 ### Pre-release tasks
 
-- [ ] Default js workspace tasks (add, remove, install, npx)
+- [x] Default js workspace tasks (add, remove, install, npx)
 - [ ] CLI flag --cwd to start cli in different target directory
 - [ ] UI with task selection
 - [ ] If multiple task matches the query show the same selection UI with mached tasks

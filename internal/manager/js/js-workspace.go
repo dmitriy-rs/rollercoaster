@@ -8,13 +8,16 @@ import (
 	"strings"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
+	"github.com/dmitriy-rs/rollercoaster/internal/manager"
+	"github.com/dmitriy-rs/rollercoaster/internal/task"
 )
 
 type JsWorkspace interface {
 	Name() string
+	ExecName() string
 	Cmd() *exec.Cmd
 
-	RunCmd() *exec.Cmd
+	ExecuteCmd() *exec.Cmd
 	InstallCmd() *exec.Cmd
 	AddCmd() *exec.Cmd
 	RemoveCmd() *exec.Cmd
@@ -66,4 +69,65 @@ func ParseJsWorkspace(dir *string) (*JsWorkspace, error) {
 	}
 
 	return &workspaces[0], nil
+}
+
+var (
+	WorkspaceInstallTask      = "install"
+	WorkspaceInstallAliasTask = "i"
+	WorkspaceAddTask          = "add"
+	WorkspaceRemoveTask       = "remove"
+	WorkspaceExecuteTask      = "x"
+)
+
+type JsWorkspaceManager struct {
+	Workspace *JsWorkspace
+}
+
+func (m *JsWorkspaceManager) ListTasks() ([]task.Task, error) {
+	tasks := []task.Task{
+		{
+			Name:        WorkspaceAddTask,
+			Description: "Install a dependency",
+		},
+		{
+			Name:        WorkspaceRemoveTask,
+			Description: "Remove a dependency",
+		},
+		{
+			Name:        WorkspaceInstallTask,
+			Description: "Install dependencies",
+			Aliases:     []string{WorkspaceInstallAliasTask},
+		},
+		{
+			Name:        WorkspaceExecuteTask,
+			Description: (*m.Workspace).ExecName() + " Execute a command",
+		},
+	}
+	return tasks, nil
+}
+
+func (m *JsWorkspaceManager) ExecuteTask(task *task.Task, args ...string) {
+	var cmd *exec.Cmd
+
+	switch task.Name {
+	case WorkspaceInstallTask:
+		cmd = (*m.Workspace).InstallCmd()
+	case WorkspaceAddTask:
+		cmd = (*m.Workspace).AddCmd()
+	case WorkspaceRemoveTask:
+		cmd = (*m.Workspace).RemoveCmd()
+	case WorkspaceExecuteTask:
+		cmd = (*m.Workspace).ExecuteCmd()
+	default:
+		cmd = (*m.Workspace).Cmd()
+	}
+
+	manager.CommandExecute(cmd, append([]string{task.Name}, args...)...)
+}
+
+func (m *JsWorkspaceManager) GetTitle() manager.Title {
+	return manager.Title{
+		Name:        (*m.Workspace).Name(),
+		Description: "package manager commands",
+	}
 }

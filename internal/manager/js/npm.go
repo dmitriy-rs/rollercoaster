@@ -23,16 +23,20 @@ func (m *NpmWorkspace) Name() string {
 	return "npm"
 }
 
+func (m *NpmWorkspace) ExecName() string {
+	return "npx"
+}
+
 func (m *NpmWorkspace) Cmd() *exec.Cmd {
-	return exec.Command("npm")
+	return exec.Command("npm", "run")
 }
 
 func (m *NpmWorkspace) InstallCmd() *exec.Cmd {
 	return exec.Command("npm", "install")
 }
 
-func (m *NpmWorkspace) RunCmd() *exec.Cmd {
-	return exec.Command("npm", "run")
+func (m *NpmWorkspace) ExecuteCmd() *exec.Cmd {
+	return exec.Command("npx")
 }
 
 func (m *NpmWorkspace) AddCmd() *exec.Cmd {

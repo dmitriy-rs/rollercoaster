@@ -13,60 +13,67 @@ import (
 
 func TestParseManager(t *testing.T) {
 	tests := []struct {
-		name              string
-		testdataDir       string
-		createGitDir      bool
-		expectedManagers  int
-		expectedJsManager bool
-		expectedTaskMgr   bool
+		name                 string
+		testdataDir          string
+		createGitDir         bool
+		expectedManagers     int
+		expectedJsManager    bool
+		expectedTaskMgr      bool
+		expectedWorkspaceMgr bool
 	}{
 		{
-			name:              "directory with only taskfile",
-			testdataDir:       "taskfile-only",
-			createGitDir:      true,
-			expectedManagers:  1,
-			expectedJsManager: false,
-			expectedTaskMgr:   true,
+			name:                 "directory with only taskfile",
+			testdataDir:          "taskfile-only",
+			createGitDir:         true,
+			expectedManagers:     1,
+			expectedJsManager:    false,
+			expectedTaskMgr:      true,
+			expectedWorkspaceMgr: false,
 		},
 		{
-			name:              "directory with package.json and pnpm-lock.yaml v9",
-			testdataDir:       "pnpm-v9-only",
-			createGitDir:      true,
-			expectedManagers:  1,
-			expectedJsManager: true,
-			expectedTaskMgr:   false,
+			name:                 "directory with package.json and pnpm-lock.yaml v9",
+			testdataDir:          "pnpm-v9-only",
+			createGitDir:         true,
+			expectedManagers:     2, // js manager + workspace manager
+			expectedJsManager:    true,
+			expectedTaskMgr:      false,
+			expectedWorkspaceMgr: true,
 		},
 		{
-			name:              "directory with both taskfile and package.json",
-			testdataDir:       "taskfile-and-package-json",
-			createGitDir:      true,
-			expectedManagers:  2,
-			expectedJsManager: true,
-			expectedTaskMgr:   true,
+			name:                 "directory with both taskfile and package.json",
+			testdataDir:          "taskfile-and-package-json",
+			createGitDir:         true,
+			expectedManagers:     3, // task manager + js manager + workspace manager
+			expectedJsManager:    true,
+			expectedTaskMgr:      true,
+			expectedWorkspaceMgr: true,
 		},
 		{
-			name:              "nested from parent directory - package.json with taskfile",
-			testdataDir:       "nested-package-json",
-			createGitDir:      true,
-			expectedManagers:  2, // parent task + parent js (workspace detected from parent)
-			expectedJsManager: true,
-			expectedTaskMgr:   true,
+			name:                 "nested from parent directory - package.json with taskfile",
+			testdataDir:          "nested-package-json",
+			createGitDir:         true,
+			expectedManagers:     3, // parent task + parent js + workspace manager
+			expectedJsManager:    true,
+			expectedTaskMgr:      true,
+			expectedWorkspaceMgr: true,
 		},
 		{
-			name:              "nested from child directory - package.json only in child",
-			testdataDir:       "nested-package-json/subdir",
-			createGitDir:      true,
-			expectedManagers:  3,
-			expectedJsManager: true,
-			expectedTaskMgr:   true,
+			name:                 "nested from child directory - package.json only in child",
+			testdataDir:          "nested-package-json/subdir",
+			createGitDir:         true,
+			expectedManagers:     4, // parent task + parent js + child js + workspace manager
+			expectedJsManager:    true,
+			expectedTaskMgr:      true,
+			expectedWorkspaceMgr: true,
 		},
 		{
-			name:              "nested taskfile with top level taskfile",
-			testdataDir:       "nested-taskfile/subdir",
-			createGitDir:      true,
-			expectedManagers:  2, // top-level task + nested task
-			expectedJsManager: false,
-			expectedTaskMgr:   true,
+			name:                 "nested taskfile with top level taskfile",
+			testdataDir:          "nested-taskfile/subdir",
+			createGitDir:         true,
+			expectedManagers:     2, // top-level task + nested task
+			expectedJsManager:    false,
+			expectedTaskMgr:      true,
+			expectedWorkspaceMgr: false,
 		},
 	}
 
@@ -110,11 +117,16 @@ func TestParseManager(t *testing.T) {
 			// Check manager types
 			hasJsManager := false
 			hasTaskManager := false
+			hasWorkspaceManager := false
 
 			for _, manager := range managers {
 				title := manager.GetTitle()
 				if strings.Contains(title.Name, "pnpm") || title.Name == "npm" || title.Name == "yarn" {
-					hasJsManager = true
+					if strings.Contains(title.Description, "package manager commands") {
+						hasWorkspaceManager = true
+					} else {
+						hasJsManager = true
+					}
 				}
 				if title.Name == "task" {
 					hasTaskManager = true
@@ -123,6 +135,7 @@ func TestParseManager(t *testing.T) {
 
 			assert.Equal(t, tt.expectedJsManager, hasJsManager, "JS manager presence should match expectation")
 			assert.Equal(t, tt.expectedTaskMgr, hasTaskManager, "Task manager presence should match expectation")
+			assert.Equal(t, tt.expectedWorkspaceMgr, hasWorkspaceManager, "Workspace manager presence should match expectation")
 		})
 	}
 }
@@ -204,6 +217,105 @@ func TestFindClosestGitDir(t *testing.T) {
 			// If there are managers, they should be parsed correctly
 			if managers != nil {
 				assert.Greater(t, len(managers), 0, "Should have at least one manager if not nil")
+			}
+		})
+	}
+}
+
+func TestParseManagerJsWorkspaceAlwaysRegistered(t *testing.T) {
+	tests := []struct {
+		name                 string
+		testdataDir          string
+		expectedWorkspaceMgr bool
+		expectedJsManagers   int
+		expectedTotalMgrs    int
+	}{
+		{
+			name:                 "pnpm workspace with scripts",
+			testdataDir:          "pnpm-v9-only",
+			expectedWorkspaceMgr: true,
+			expectedJsManagers:   1, // one js manager for the package.json
+			expectedTotalMgrs:    2, // js manager + workspace manager
+		},
+		{
+			name:                 "taskfile and pnpm workspace",
+			testdataDir:          "taskfile-and-package-json",
+			expectedWorkspaceMgr: true,
+			expectedJsManagers:   1, // one js manager for the package.json
+			expectedTotalMgrs:    3, // task manager + js manager + workspace manager
+		},
+		{
+			name:                 "nested with workspace at root",
+			testdataDir:          "nested-package-json",
+			expectedWorkspaceMgr: true,
+			expectedJsManagers:   1, // one js manager for the package.json
+			expectedTotalMgrs:    3, // task manager + js manager + workspace manager
+		},
+		{
+			name:                 "no js workspace",
+			testdataDir:          "taskfile-only",
+			expectedWorkspaceMgr: false,
+			expectedJsManagers:   0,
+			expectedTotalMgrs:    1, // only task manager
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testDir := filepath.Join("testdata", tt.testdataDir)
+
+			// Create .git directory
+			var gitDir string
+			switch tt.testdataDir {
+			case "nested-package-json":
+				gitDir = filepath.Join("testdata", "nested-package-json", ".git")
+			default:
+				gitDir = filepath.Join(testDir, ".git")
+			}
+			err := os.MkdirAll(gitDir, 0755)
+			require.NoError(t, err, "Failed to create .git directory")
+			defer os.RemoveAll(gitDir) //nolint:errcheck
+
+			managers, err := parser.ParseManager(&testDir)
+
+			require.NoError(t, err, "ParseManager should not return error")
+			require.NotNil(t, managers, "ParseManager should return managers")
+			assert.Len(t, managers, tt.expectedTotalMgrs, "Should have expected total number of managers")
+
+			// Count different manager types
+			jsManagerCount := 0
+			workspaceManagerCount := 0
+			taskManagerCount := 0
+
+			for _, manager := range managers {
+				title := manager.GetTitle()
+				if strings.Contains(title.Name, "pnpm") || title.Name == "npm" || title.Name == "yarn" {
+					if strings.Contains(title.Description, "package manager commands") {
+						workspaceManagerCount++
+					} else {
+						jsManagerCount++
+					}
+				}
+				if title.Name == "task" {
+					taskManagerCount++
+				}
+			}
+
+			assert.Equal(t, tt.expectedJsManagers, jsManagerCount, "Should have expected number of JS managers")
+
+			if tt.expectedWorkspaceMgr {
+				assert.Equal(t, 1, workspaceManagerCount, "Should have exactly one workspace manager when JS workspace is detected")
+			} else {
+				assert.Equal(t, 0, workspaceManagerCount, "Should have no workspace manager when no JS workspace is detected")
+			}
+
+			// Verify workspace manager is always last when present (due to slices.Reverse)
+			if tt.expectedWorkspaceMgr && len(managers) > 0 {
+				lastManager := managers[0] // After reverse, workspace manager should be first
+				title := lastManager.GetTitle()
+				assert.True(t,
+					strings.Contains(title.Description, "package manager commands"),
+					"Workspace manager should be first in the list (last added, first after reverse)")
 			}
 		})
 	}

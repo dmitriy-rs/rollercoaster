@@ -65,7 +65,7 @@ func TestNpmWorkspace_Cmd(t *testing.T) {
 	workspace := &jsmanager.NpmWorkspace{}
 	cmd := workspace.Cmd()
 
-	expectedArgs := []string{"npm"}
+	expectedArgs := []string{"npm", "run"}
 	assert.Equal(t, expectedArgs, cmd.Args, "NpmWorkspace.Cmd() should return correct args")
 }
 
@@ -77,12 +77,12 @@ func TestNpmWorkspace_InstallCmd(t *testing.T) {
 	assert.Equal(t, expectedArgs, cmd.Args, "NpmWorkspace.InstallCmd() should return correct args")
 }
 
-func TestNpmWorkspace_RunCmd(t *testing.T) {
+func TestNpmWorkspace_ExecuteCmd(t *testing.T) {
 	workspace := &jsmanager.NpmWorkspace{}
-	cmd := workspace.RunCmd()
+	cmd := workspace.ExecuteCmd()
 
-	expectedArgs := []string{"npm", "run"}
-	assert.Equal(t, expectedArgs, cmd.Args, "NpmWorkspace.RunCmd() should return correct args")
+	expectedArgs := []string{"npx"}
+	assert.Equal(t, expectedArgs, cmd.Args, "NpmWorkspace.ExecuteCmd() should return correct args")
 }
 
 func TestNpmWorkspace_AddCmd(t *testing.T) {
