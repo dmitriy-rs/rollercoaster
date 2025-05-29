@@ -36,24 +36,24 @@ func execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	taskManager, err := parser.ParseManager(&dir)
+	managers, err := parser.ParseManager(&dir)
 	if err != nil {
 		logger.Error("", err)
 		return err
 	}
-	if taskManager == nil {
+	if len(managers) == 0 {
 		return nil
 	}
 
 	if len(args) == 0 {
-		return ui.RenderTaskList(taskManager)
+		return ui.RenderTaskList(managers)
 	} else {
 		commandName := args[0]
 		commandArgs := args[1:]
-		closestTask, err := manager.FindClosestTask(taskManager, commandName)
+		taskManager, closestTask, err := manager.FindClosestTaskFromList(managers, commandName)
 		if err != nil {
-			logger.Warning("No tasks found")
-			return ui.RenderTaskList(taskManager)
+			logger.Info("No tasks found")
+			return ui.RenderTaskList(managers)
 		}
 		taskManager.ExecuteTask(closestTask, commandArgs...)
 		return nil

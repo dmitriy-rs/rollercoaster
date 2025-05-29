@@ -1,10 +1,10 @@
-package configfile_test
+package config_test
 
 import (
 	"path/filepath"
 	"testing"
 
-	configfile "github.com/dmitriy-rs/rollercoaster/internal/configFile"
+	config "github.com/dmitriy-rs/rollercoaster/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -70,10 +70,10 @@ func TestParseFileAsJson(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mf := configfile.FindInDirectory(&testdataDir, tt.filename)
+			mf := config.FindInDirectory(&testdataDir, tt.filename)
 			require.NotNil(t, mf, "Failed to find test file: %s", tt.filename)
 
-			result, err := configfile.ParseFileAsJson[PackageJSON](mf)
+			result, err := config.ParseFileAsJson[PackageJSON](mf)
 
 			if tt.expectError {
 				assert.Error(t, err, "Expected error but got none")
@@ -119,10 +119,10 @@ func TestParseFileAsYaml(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mf := configfile.FindInDirectory(&testdataDir, tt.filename)
+			mf := config.FindInDirectory(&testdataDir, tt.filename)
 			require.NotNil(t, mf, "Failed to find test file: %s", tt.filename)
 
-			result, err := configfile.ParseFileAsYaml[TaskfileYAML](mf)
+			result, err := config.ParseFileAsYaml[TaskfileYAML](mf)
 
 			if tt.expectError {
 				assert.Error(t, err, "Expected error but got none")
@@ -176,7 +176,7 @@ func TestFindInDirectory(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := configfile.FindInDirectory(tt.dir, tt.filename)
+			result := config.FindInDirectory(tt.dir, tt.filename)
 
 			if tt.expected {
 				assert.NotNil(t, result, "Expected to find file but got nil")
@@ -231,7 +231,7 @@ func TestFindFirstInDirectory(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := configfile.FindFirstInDirectory(tt.dir, tt.filenames)
+			result := config.FindFirstInDirectory(tt.dir, tt.filenames)
 
 			if tt.expected == "" {
 				assert.Nil(t, result, "Expected nil but got result")

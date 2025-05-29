@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	manager "github.com/dmitriy-rs/rollercoaster/internal/manager/task"
+	manager "github.com/dmitriy-rs/rollercoaster/internal/manager/task-manager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

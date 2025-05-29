@@ -1,7 +1,7 @@
 package jsmanager
 
 import (
-	configfile "github.com/dmitriy-rs/rollercoaster/internal/configFile"
+	config "github.com/dmitriy-rs/rollercoaster/internal/config"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
 )
@@ -19,11 +19,11 @@ type packageJsonConfig struct {
 const packageJsonFilename = "package.json"
 
 func ParseJsManager(dir *string, workspace JsWorkspace) (*JsManager, error) {
-	packageJsonFile := configfile.FindInDirectory(dir, packageJsonFilename)
+	packageJsonFile := config.FindInDirectory(dir, packageJsonFilename)
 	if packageJsonFile == nil {
 		return nil, nil
 	}
-	config, err := configfile.ParseFileAsJson[packageJsonConfig](packageJsonFile)
+	config, err := config.ParseFileAsJson[packageJsonConfig](packageJsonFile)
 	if err != nil {
 		return nil, err
 	}

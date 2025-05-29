@@ -56,6 +56,16 @@ func (c *ManagerParseConfig) GetDirectories() []string {
 	return parsedDirectories
 }
 
+func FindClosestTaskFromList(managers []Manager, arg string) (Manager, *task.Task, error) {
+	for _, manager := range managers {
+		task, _ := FindClosestTask(manager, arg)
+		if task != nil {
+			return manager, task, nil
+		}
+	}
+	return nil, nil, fmt.Errorf("no task found for '%s'", arg)
+}
+
 func FindClosestTask(manager Manager, arg string) (*task.Task, error) {
 	tasks, err := manager.ListTasks()
 	if err != nil {

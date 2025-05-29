@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
-	configfile "github.com/dmitriy-rs/rollercoaster/internal/configFile"
+	config "github.com/dmitriy-rs/rollercoaster/internal/config"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
 )
@@ -40,8 +40,8 @@ var distTaskFilenames = [4]string{
 func ParseTaskManager(dir *string) (*TaskManager, error) {
 	tm := &TaskManager{}
 
-	localFile := configfile.FindFirstInDirectory(dir, localTaskFilenames[:])
-	distFile := configfile.FindFirstInDirectory(dir, distTaskFilenames[:])
+	localFile := config.FindFirstInDirectory(dir, localTaskFilenames[:])
+	distFile := config.FindFirstInDirectory(dir, distTaskFilenames[:])
 
 	if distFile != nil {
 		config, err := parseConfig(distFile)
@@ -72,8 +72,8 @@ func ParseTaskManager(dir *string) (*TaskManager, error) {
 	return tm, nil
 }
 
-func parseConfig(file *configfile.ConfigFile) (*TaskManagerConfig, error) {
-	config, err := configfile.ParseFileAsYaml[TaskManagerConfig](file)
+func parseConfig(file *config.ConfigFile) (*TaskManagerConfig, error) {
+	config, err := config.ParseFileAsYaml[TaskManagerConfig](file)
 	if err != nil {
 		return nil, err
 	}
