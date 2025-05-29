@@ -71,4 +71,4 @@ jobs:
       run: go build -v ./...
 
     - name: Build binary
-      run: task build
+      run: go build -ldflags "-X github.com/dmitriy-rs/rollercoaster/internal/logger.MODE=PROD" -o rollercoaster ./main.go
