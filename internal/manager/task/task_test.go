@@ -3,18 +3,17 @@ package taskmanager_test
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	manager "github.com/dmitriy-rs/rollercoaster/internal/manager/task"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func setupTaskManagerTestDir(t *testing.T, dirName string) string {
 	testDir := filepath.Join(os.TempDir(), "task-manager-test", dirName)
 	err := os.MkdirAll(testDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create test directory: %v", err)
-	}
+	require.NoError(t, err, "Failed to create test directory")
 	return testDir
 }
 
@@ -25,9 +24,7 @@ func cleanupTaskManagerTestDir(testDir string) {
 func createTaskFile(t *testing.T, dir, filename, content string) {
 	filePath := filepath.Join(dir, filename)
 	err := os.WriteFile(filePath, []byte(content), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create task file %s: %v", filename, err)
-	}
+	require.NoError(t, err, "Failed to create task file %s", filename)
 }
 
 const validTaskfileContent = `version: '3'
@@ -95,34 +92,21 @@ func TestParseTaskManager_LocalTaskfiles(t *testing.T) {
 			createTaskFile(t, testDir, filename, validTaskfileContent)
 
 			tm, err := manager.ParseTaskManager(&testDir)
-			if err != nil {
-				t.Fatalf("Expected no error, got: %v", err)
-			}
-
-			if tm == nil {
-				t.Fatal("Expected TaskManager, got nil")
-			}
+			require.NoError(t, err, "Should parse task manager without error")
+			require.NotNil(t, tm, "Should return a TaskManager instance")
 
 			tasks, err := tm.ListTasks()
-			if err != nil {
-				t.Fatalf("Failed to list tasks: %v", err)
-			}
+			require.NoError(t, err, "Should list tasks without error")
 
 			expectedTasks := []string{"build", "lint", "test"}
-			if len(tasks) != len(expectedTasks) {
-				t.Fatalf("Expected %d tasks, got %d", len(expectedTasks), len(tasks))
-			}
+			assert.Len(t, tasks, len(expectedTasks), "Should return correct number of tasks")
 
 			for i, expectedName := range expectedTasks {
-				if tasks[i].Name != expectedName {
-					t.Errorf("Expected task name %s, got %s", expectedName, tasks[i].Name)
-				}
+				assert.Equal(t, expectedName, tasks[i].Name, "Task name should match at index %d", i)
 			}
 
 			title := tm.GetTitle()
-			if title.Name == "" {
-				t.Error("Expected non-empty title")
-			}
+			assert.NotEmpty(t, title.Name, "Title name should not be empty")
 		})
 	}
 }
@@ -143,28 +127,17 @@ func TestParseTaskManager_DistTaskfiles(t *testing.T) {
 			createTaskFile(t, testDir, filename, validDistTaskfileContent)
 
 			tm, err := manager.ParseTaskManager(&testDir)
-			if err != nil {
-				t.Fatalf("Expected no error, got: %v", err)
-			}
-
-			if tm == nil {
-				t.Fatal("Expected TaskManager, got nil")
-			}
+			require.NoError(t, err, "Should parse task manager without error")
+			require.NotNil(t, tm, "Should return a TaskManager instance")
 
 			tasks, err := tm.ListTasks()
-			if err != nil {
-				t.Fatalf("Failed to list tasks: %v", err)
-			}
+			require.NoError(t, err, "Should list tasks without error")
 
 			expectedTasks := []string{"clean", "install"}
-			if len(tasks) != len(expectedTasks) {
-				t.Fatalf("Expected %d tasks, got %d", len(expectedTasks), len(tasks))
-			}
+			assert.Len(t, tasks, len(expectedTasks), "Should return correct number of tasks")
 
 			for i, expectedName := range expectedTasks {
-				if tasks[i].Name != expectedName {
-					t.Errorf("Expected task name %s, got %s", expectedName, tasks[i].Name)
-				}
+				assert.Equal(t, expectedName, tasks[i].Name, "Task name should match at index %d", i)
 			}
 		})
 	}
@@ -192,35 +165,23 @@ func TestParseTaskManager_BothDistAndLocal(t *testing.T) {
 			createTaskFile(t, testDir, tc.localFile, validTaskfileContent)
 
 			tm, err := manager.ParseTaskManager(&testDir)
-			if err != nil {
-				t.Fatalf("Expected no error, got: %v", err)
-			}
-
-			if tm == nil {
-				t.Fatal("Expected TaskManager, got nil")
-			}
+			require.NoError(t, err, "Should parse task manager without error")
+			require.NotNil(t, tm, "Should return a TaskManager instance")
 
 			tasks, err := tm.ListTasks()
-			if err != nil {
-				t.Fatalf("Failed to list tasks: %v", err)
-			}
+			require.NoError(t, err, "Should list tasks without error")
 
-			// Should have tasks from both files: build, clean, install, lint, test
+			// Should have tasks from both files (5 total: build, lint, test from local + clean, install from dist)
 			expectedTasks := []string{"build", "clean", "install", "lint", "test"}
-			if len(tasks) != len(expectedTasks) {
-				t.Fatalf("Expected %d tasks, got %d", len(expectedTasks), len(tasks))
+			assert.Len(t, tasks, len(expectedTasks), "Should return tasks from both files")
+
+			taskNames := make([]string, len(tasks))
+			for i, task := range tasks {
+				taskNames[i] = task.Name
 			}
 
-			for i, expectedName := range expectedTasks {
-				if tasks[i].Name != expectedName {
-					t.Errorf("Expected task name %s, got %s", expectedName, tasks[i].Name)
-				}
-			}
-
-			// Check that title mentions both files
-			title := tm.GetTitle()
-			if title.Name == "" {
-				t.Error("Expected non-empty title")
+			for _, expectedName := range expectedTasks {
+				assert.Contains(t, taskNames, expectedName, "Should contain task %s", expectedName)
 			}
 		})
 	}
@@ -254,23 +215,15 @@ tasks:
 	createTaskFile(t, testDir, "Taskfile.yml", localContent)
 
 	tm, err := manager.ParseTaskManager(&testDir)
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
+	require.NoError(t, err, "Should parse task manager without error")
 
 	tasks, err := tm.ListTasks()
-	if err != nil {
-		t.Fatalf("Failed to list tasks: %v", err)
-	}
+	require.NoError(t, err, "Should list tasks without error")
 
-	if len(tasks) != 1 {
-		t.Fatalf("Expected 1 task, got %d", len(tasks))
-	}
+	require.Len(t, tasks, 1, "Should have exactly one task")
 
 	// Local should override dist
-	if tasks[0].Description != "Build from local" {
-		t.Errorf("Expected local task description, got: %s", tasks[0].Description)
-	}
+	assert.Equal(t, "Build from local", tasks[0].Description, "Local task should override dist task")
 }
 
 func TestParseTaskManager_NoTaskfiles(t *testing.T) {
@@ -278,13 +231,8 @@ func TestParseTaskManager_NoTaskfiles(t *testing.T) {
 	defer cleanupTaskManagerTestDir(testDir)
 
 	tm, err := manager.ParseTaskManager(&testDir)
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
-
-	if tm != nil {
-		t.Error("Expected nil TaskManager when no taskfiles found")
-	}
+	assert.NoError(t, err, "Should not return error when no taskfiles found")
+	assert.Nil(t, tm, "Should return nil TaskManager when no taskfiles found")
 }
 
 func TestParseTaskManager_InvalidVersion(t *testing.T) {
@@ -294,13 +242,8 @@ func TestParseTaskManager_InvalidVersion(t *testing.T) {
 	createTaskFile(t, testDir, "Taskfile.yml", invalidTaskfileContent)
 
 	tm, err := manager.ParseTaskManager(&testDir)
-	if err == nil {
-		t.Fatal("Expected error for unsupported version")
-	}
-
-	if tm != nil {
-		t.Error("Expected nil TaskManager for invalid version")
-	}
+	assert.Error(t, err, "Should return error for unsupported version")
+	assert.Nil(t, tm, "Should return nil TaskManager for invalid version")
 }
 
 func TestParseTaskManager_NoVersion(t *testing.T) {
@@ -310,13 +253,8 @@ func TestParseTaskManager_NoVersion(t *testing.T) {
 	createTaskFile(t, testDir, "Taskfile.yml", noVersionTaskfileContent)
 
 	tm, err := manager.ParseTaskManager(&testDir)
-	if err == nil {
-		t.Fatal("Expected error for missing version")
-	}
-
-	if tm != nil {
-		t.Error("Expected nil TaskManager for missing version")
-	}
+	assert.Error(t, err, "Should return error when version is not specified")
+	assert.Nil(t, tm, "Should return nil TaskManager when version is missing")
 }
 
 func TestParseTaskManager_EmptyTasks(t *testing.T) {
@@ -331,22 +269,12 @@ tasks: {}
 	createTaskFile(t, testDir, "Taskfile.yml", emptyTasksContent)
 
 	tm, err := manager.ParseTaskManager(&testDir)
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
-
-	if tm == nil {
-		t.Fatal("Expected TaskManager, got nil")
-	}
+	require.NoError(t, err, "Should parse taskfile with empty tasks")
+	require.NotNil(t, tm, "Should return TaskManager for empty tasks")
 
 	tasks, err := tm.ListTasks()
-	if err != nil {
-		t.Fatalf("Failed to list tasks: %v", err)
-	}
-
-	if len(tasks) != 0 {
-		t.Errorf("Expected 0 tasks, got %d", len(tasks))
-	}
+	assert.NoError(t, err, "Should list empty tasks without error")
+	assert.Empty(t, tasks, "Should return empty task list")
 }
 
 func TestParseTaskManager_NoTasksSection(t *testing.T) {
@@ -359,67 +287,64 @@ func TestParseTaskManager_NoTasksSection(t *testing.T) {
 	createTaskFile(t, testDir, "Taskfile.yml", noTasksContent)
 
 	tm, err := manager.ParseTaskManager(&testDir)
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
-
-	if tm == nil {
-		t.Fatal("Expected TaskManager, got nil")
-	}
+	require.NoError(t, err, "Should parse taskfile without tasks section")
+	require.NotNil(t, tm, "Should return TaskManager without tasks section")
 
 	tasks, err := tm.ListTasks()
-	if err != nil {
-		t.Fatalf("Failed to list tasks: %v", err)
-	}
-
-	if len(tasks) != 0 {
-		t.Errorf("Expected 0 tasks, got %d", len(tasks))
-	}
+	assert.NoError(t, err, "Should handle missing tasks section")
+	assert.Empty(t, tasks, "Should return empty task list when no tasks section")
 }
 
 func TestTaskManager_GetTitle(t *testing.T) {
-	tests := []struct {
-		name      string
-		filenames []string
+	testCases := []struct {
+		name          string
+		files         map[string]string
+		expectedFiles []string
 	}{
 		{
-			name:      "no_files",
-			filenames: []string{},
+			name: "single_local_file",
+			files: map[string]string{
+				"Taskfile.yml": validTaskfileContent,
+			},
+			expectedFiles: []string{"Taskfile.yml"},
 		},
 		{
-			name:      "single_file",
-			filenames: []string{"Taskfile.yml"},
+			name: "single_dist_file",
+			files: map[string]string{
+				"Taskfile.dist.yml": validDistTaskfileContent,
+			},
+			expectedFiles: []string{"Taskfile.dist.yml"},
 		},
 		{
-			name:      "multiple_files",
-			filenames: []string{"Taskfile.dist.yml", "Taskfile.yml"},
+			name: "both_files",
+			files: map[string]string{
+				"Taskfile.dist.yml": validDistTaskfileContent,
+				"Taskfile.yml":      validTaskfileContent,
+			},
+			expectedFiles: []string{"Taskfile.dist.yml", "Taskfile.yml"},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			testDir := setupTaskManagerTestDir(t, "title_test_"+tt.name)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			testDir := setupTaskManagerTestDir(t, "title_"+tc.name)
 			defer cleanupTaskManagerTestDir(testDir)
 
-			// Create files if specified
-			for _, filename := range tt.filenames {
-				createTaskFile(t, testDir, filename, validTaskfileContent)
+			for filename, content := range tc.files {
+				createTaskFile(t, testDir, filename, content)
 			}
 
 			tm, err := manager.ParseTaskManager(&testDir)
-			if len(tt.filenames) == 0 {
-				if tm != nil {
-					t.Error("Expected nil TaskManager for no files")
-				}
-				return
-			}
+			require.NoError(t, err, "Should parse task manager without error")
+			require.NotNil(t, tm, "Should return TaskManager")
 
-			if err != nil {
-				t.Fatalf("Expected no error, got: %v", err)
-			}
+			title := tm.GetTitle()
+			assert.Equal(t, "task", title.Name, "Title name should be 'task'")
+			assert.Contains(t, title.Description, "task runner. parsed from", "Title should contain base description")
 
-			if tm == nil {
-				t.Fatal("Expected TaskManager, got nil")
+			// Check that all expected files are mentioned in the title
+			for _, expectedFile := range tc.expectedFiles {
+				assert.Contains(t, title.Description, expectedFile, "Title should mention file %s", expectedFile)
 			}
 		})
 	}
@@ -451,24 +376,16 @@ tasks:
 	createTaskFile(t, testDir, "Taskfile.yml", unsortedTasksContent)
 
 	tm, err := manager.ParseTaskManager(&testDir)
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
+	require.NoError(t, err, "Should parse task manager without error")
 
 	tasks, err := tm.ListTasks()
-	if err != nil {
-		t.Fatalf("Failed to list tasks: %v", err)
-	}
+	require.NoError(t, err, "Should list tasks without error")
 
 	expectedOrder := []string{"alpha", "beta", "zebra"}
-	if len(tasks) != len(expectedOrder) {
-		t.Fatalf("Expected %d tasks, got %d", len(expectedOrder), len(tasks))
-	}
+	require.Len(t, tasks, len(expectedOrder), "Should return correct number of tasks")
 
 	for i, expectedName := range expectedOrder {
-		if tasks[i].Name != expectedName {
-			t.Errorf("Expected task %d to be %s, got %s", i, expectedName, tasks[i].Name)
-		}
+		assert.Equal(t, expectedName, tasks[i].Name, "Task should be in correct order at index %d", i)
 	}
 }
 
@@ -514,43 +431,26 @@ func TestParseTaskManager_WithTestdata(t *testing.T) {
 			tm, err := manager.ParseTaskManager(&tt.testdataDir)
 
 			if tt.expectError {
-				if err == nil {
-					t.Fatal("Expected error but got none")
-				}
-				if tm != nil {
-					t.Error("Expected nil TaskManager for error case")
-				}
+				assert.Error(t, err, "Should return error for invalid testdata")
+				assert.Nil(t, tm, "Should return nil TaskManager for error case")
 				return
 			}
 
-			if err != nil {
-				t.Fatalf("Expected no error, got: %v", err)
-			}
-
-			if tm == nil {
-				t.Fatal("Expected TaskManager, got nil")
-			}
+			require.NoError(t, err, "Should parse testdata without error")
+			require.NotNil(t, tm, "Should return TaskManager for valid testdata")
 
 			tasks, err := tm.ListTasks()
-			if err != nil {
-				t.Fatalf("Failed to list tasks: %v", err)
-			}
+			require.NoError(t, err, "Should list tasks without error")
 
-			if len(tasks) != len(tt.expectedTasks) {
-				t.Fatalf("Expected %d tasks, got %d", len(tt.expectedTasks), len(tasks))
-			}
+			assert.Len(t, tasks, len(tt.expectedTasks), "Should return correct number of tasks")
 
 			for i, expectedName := range tt.expectedTasks {
-				if tasks[i].Name != expectedName {
-					t.Errorf("Expected task %d to be %s, got %s", i, expectedName, tasks[i].Name)
-				}
+				assert.Equal(t, expectedName, tasks[i].Name, "Task name should match at index %d", i)
 			}
 
 			// Verify title is not empty
 			title := tm.GetTitle()
-			if title.Name == "" {
-				t.Error("Expected non-empty title")
-			}
+			assert.NotEmpty(t, title.Name, "Title name should not be empty")
 		})
 	}
 }
@@ -571,41 +471,31 @@ func TestParseTaskManager_AllFilenameVariations(t *testing.T) {
 		{"taskfile.dist.yaml", "taskfile.dist.yaml", false},
 	}
 
-	for _, tf := range allFilenames {
-		t.Run(tf.name, func(t *testing.T) {
-			testDir := setupTaskManagerTestDir(t, "filename_variation_"+tf.name)
+	for _, file := range allFilenames {
+		t.Run(file.name, func(t *testing.T) {
+			testDir := setupTaskManagerTestDir(t, "filename_"+file.name)
 			defer cleanupTaskManagerTestDir(testDir)
 
-			content := validTaskfileContent
-			if !tf.isLocal {
+			var content string
+			if file.isLocal {
+				content = validTaskfileContent
+			} else {
 				content = validDistTaskfileContent
 			}
 
-			createTaskFile(t, testDir, tf.filename, content)
+			createTaskFile(t, testDir, file.filename, content)
 
 			tm, err := manager.ParseTaskManager(&testDir)
-			if err != nil {
-				t.Fatalf("Expected no error, got: %v", err)
-			}
-
-			if tm == nil {
-				t.Fatal("Expected TaskManager, got nil")
-			}
+			require.NoError(t, err, "Should parse %s without error", file.filename)
+			require.NotNil(t, tm, "Should return TaskManager for %s", file.filename)
 
 			tasks, err := tm.ListTasks()
-			if err != nil {
-				t.Fatalf("Failed to list tasks: %v", err)
-			}
+			require.NoError(t, err, "Should list tasks for %s", file.filename)
+			assert.NotEmpty(t, tasks, "Should return non-empty task list for %s", file.filename)
 
-			if len(tasks) == 0 {
-				t.Error("Expected at least one task")
-			}
-
-			// Verify the title contains the filename
 			title := tm.GetTitle()
-			if !strings.Contains(title.Description, tf.filename) {
-				t.Errorf("Expected title to contain %s, got: %s", tf.filename, title.Description)
-			}
+			assert.NotEmpty(t, title.Name, "Title should not be empty for %s", file.filename)
+			assert.Contains(t, title.Description, file.filename, "Title should mention the filename")
 		})
 	}
 }

@@ -4,7 +4,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dmitriy-rs/rollercoaster/internal/configFile"
+	configfile "github.com/dmitriy-rs/rollercoaster/internal/configFile"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Test structures for JSON and YAML parsing
@@ -69,29 +71,17 @@ func TestParseFileAsJson(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mf := configfile.FindInDirectory(&testdataDir, tt.filename)
-			if mf == nil {
-				t.Fatalf("Failed to find test file: %s", tt.filename)
-			}
+			require.NotNil(t, mf, "Failed to find test file: %s", tt.filename)
 
 			result, err := configfile.ParseFileAsJson[PackageJSON](mf)
 
-			if tt.expectError && err == nil {
-				t.Error("Expected error but got none")
-			}
-			if !tt.expectError && err != nil {
-				t.Errorf("Unexpected error: %v", err)
-			}
-
-			if !tt.expectError {
-				if result.Name != tt.expected.Name {
-					t.Errorf("Expected name %s, got %s", tt.expected.Name, result.Name)
-				}
-				if result.Version != tt.expected.Version {
-					t.Errorf("Expected version %s, got %s", tt.expected.Version, result.Version)
-				}
-				if result.Description != tt.expected.Description {
-					t.Errorf("Expected description %s, got %s", tt.expected.Description, result.Description)
-				}
+			if tt.expectError {
+				assert.Error(t, err, "Expected error but got none")
+			} else {
+				assert.NoError(t, err, "Unexpected error")
+				assert.Equal(t, tt.expected.Name, result.Name, "Name should match expected value")
+				assert.Equal(t, tt.expected.Version, result.Version, "Version should match expected value")
+				assert.Equal(t, tt.expected.Description, result.Description, "Description should match expected value")
 			}
 		})
 	}
@@ -130,27 +120,16 @@ func TestParseFileAsYaml(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mf := configfile.FindInDirectory(&testdataDir, tt.filename)
-			if mf == nil {
-				t.Fatalf("Failed to find test file: %s", tt.filename)
-			}
+			require.NotNil(t, mf, "Failed to find test file: %s", tt.filename)
 
 			result, err := configfile.ParseFileAsYaml[TaskfileYAML](mf)
 
-			if tt.expectError && err == nil {
-				t.Error("Expected error but got none")
-			}
-			if !tt.expectError && err != nil {
-				t.Errorf("Unexpected error: %v", err)
-			}
-
-			if !tt.expectError {
-				if result.Version != tt.expected.Version {
-					t.Errorf("Expected version %s, got %s", tt.expected.Version, result.Version)
-				}
-				// Verify that tasks were parsed for valid files
-				if len(result.Tasks) == 0 {
-					t.Error("Expected tasks to be parsed but got empty map")
-				}
+			if tt.expectError {
+				assert.Error(t, err, "Expected error but got none")
+			} else {
+				assert.NoError(t, err, "Unexpected error")
+				assert.Equal(t, tt.expected.Version, result.Version, "Version should match expected value")
+				assert.NotEmpty(t, result.Tasks, "Expected tasks to be parsed but got empty map")
 			}
 		})
 	}
@@ -199,21 +178,13 @@ func TestFindInDirectory(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := configfile.FindInDirectory(tt.dir, tt.filename)
 
-			if tt.expected && result == nil {
-				t.Error("Expected to find file but got nil")
-			}
-			if !tt.expected && result != nil {
-				t.Error("Expected nil but found file")
-			}
-
-			if result != nil {
+			if tt.expected {
+				assert.NotNil(t, result, "Expected to find file but got nil")
 				expectedPath := filepath.Join(*tt.dir, tt.filename)
-				if result.Filename != expectedPath {
-					t.Errorf("Expected filename %s, got %s", expectedPath, result.Filename)
-				}
-				if len(result.File) == 0 {
-					t.Error("Expected file content but got empty")
-				}
+				assert.Equal(t, expectedPath, result.Filename, "Filename should match expected path")
+				assert.NotEmpty(t, result.File, "Expected file content but got empty")
+			} else {
+				assert.Nil(t, result, "Expected nil but found file")
 			}
 		})
 	}
@@ -262,18 +233,12 @@ func TestFindFirstInDirectory(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := configfile.FindFirstInDirectory(tt.dir, tt.filenames)
 
-			if tt.expected == "" && result != nil {
-				t.Error("Expected nil but got result")
-			}
-			if tt.expected != "" && result == nil {
-				t.Error("Expected result but got nil")
-			}
-
-			if result != nil {
+			if tt.expected == "" {
+				assert.Nil(t, result, "Expected nil but got result")
+			} else {
+				assert.NotNil(t, result, "Expected result but got nil")
 				expectedPath := filepath.Join(*tt.dir, tt.expected)
-				if result.Filename != expectedPath {
-					t.Errorf("Expected filename %s, got %s", expectedPath, result.Filename)
-				}
+				assert.Equal(t, expectedPath, result.Filename, "Filename should match expected path")
 			}
 		})
 	}

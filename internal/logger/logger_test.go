@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestError(t *testing.T) {
@@ -55,9 +56,7 @@ func TestError(t *testing.T) {
 
 			// Remove ANSI color codes for comparison
 			cleanOutput := removeANSICodes(output)
-			if !strings.Contains(cleanOutput, tt.expected) {
-				t.Errorf("Error() output = %q, want to contain %q", cleanOutput, tt.expected)
-			}
+			assert.Contains(t, cleanOutput, tt.expected, "Error output should contain expected message")
 		})
 	}
 }
@@ -108,9 +107,7 @@ func TestFatal(t *testing.T) {
 
 			// Remove ANSI color codes for comparison
 			cleanOutput := removeANSICodes(output)
-			if !strings.Contains(cleanOutput, tt.expected) {
-				t.Errorf("Fatal() output = %q, want to contain %q", cleanOutput, tt.expected)
-			}
+			assert.Contains(t, cleanOutput, tt.expected, "Fatal output should contain expected message")
 		})
 	}
 }
@@ -151,9 +148,7 @@ func TestInfo(t *testing.T) {
 
 			// Remove ANSI color codes for comparison
 			cleanOutput := removeANSICodes(output)
-			if !strings.Contains(cleanOutput, tt.expected) {
-				t.Errorf("Info() output = %q, want to contain %q", cleanOutput, tt.expected)
-			}
+			assert.Contains(t, cleanOutput, tt.expected, "Info output should contain expected message")
 		})
 	}
 }
@@ -194,9 +189,7 @@ func TestWarning(t *testing.T) {
 
 			// Remove ANSI color codes for comparison
 			cleanOutput := removeANSICodes(output)
-			if !strings.Contains(cleanOutput, tt.expected) {
-				t.Errorf("Warning() output = %q, want to contain %q", cleanOutput, tt.expected)
-			}
+			assert.Contains(t, cleanOutput, tt.expected, "Warning output should contain expected message")
 		})
 	}
 }
@@ -242,9 +235,7 @@ func TestDebug(t *testing.T) {
 
 			// Remove ANSI color codes for comparison
 			cleanOutput := removeANSICodes(output)
-			if !strings.Contains(cleanOutput, tt.expected) {
-				t.Errorf("Debug() output = %q, want to contain %q", cleanOutput, tt.expected)
-			}
+			assert.Contains(t, cleanOutput, tt.expected, "Debug output should contain expected message")
 		})
 	}
 }

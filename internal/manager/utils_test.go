@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTaskExecute_SuccessfulCommand(t *testing.T) {
@@ -19,9 +20,10 @@ func TestTaskExecute_SuccessfulCommand(t *testing.T) {
 	}
 
 	// Execute the task - should complete without error
-	manager.CommandExecute(cmd)
+	assert.NotPanics(t, func() {
+		manager.CommandExecute(cmd)
+	}, "CommandExecute should not panic on successful command")
 
-	// The test passes if the function returns without panicking
 	// The output will go to os.Stdout as intended by the function
 }
 
@@ -35,10 +37,9 @@ func TestTaskExecute_CommandWithError(t *testing.T) {
 	}
 
 	// Execute the task - should not panic or exit
-	manager.CommandExecute(cmd)
-
-	// The function should return gracefully even on error
-	// This test passes if no panic occurs
+	assert.NotPanics(t, func() {
+		manager.CommandExecute(cmd)
+	}, "CommandExecute should handle errors gracefully without panicking")
 }
 
 func TestTaskExecute_WithAdditionalArgs(t *testing.T) {
@@ -57,9 +58,7 @@ func TestTaskExecute_WithAdditionalArgs(t *testing.T) {
 	manager.CommandExecute(cmd, "test", "argument")
 
 	// Verify the arguments were added (they should be added before execution)
-	if len(cmd.Args) <= originalArgsLen {
-		t.Errorf("Expected more than %d arguments after adding args, got %d", originalArgsLen, len(cmd.Args))
-	}
+	assert.Greater(t, len(cmd.Args), originalArgsLen, "Additional arguments should be added to command")
 
 	// Check that our additional args were added
 	argsFound := false
@@ -70,9 +69,7 @@ func TestTaskExecute_WithAdditionalArgs(t *testing.T) {
 		}
 	}
 
-	if !argsFound {
-		t.Error("Additional arguments 'test' and 'argument' were not found in command args")
-	}
+	assert.True(t, argsFound, "Additional arguments 'test' and 'argument' should be found in command args")
 }
 
 func TestTaskExecute_NoAdditionalArgs(t *testing.T) {
@@ -91,9 +88,7 @@ func TestTaskExecute_NoAdditionalArgs(t *testing.T) {
 	manager.CommandExecute(cmd)
 
 	// Verify no additional args were added
-	if len(cmd.Args) != originalArgsLen {
-		t.Errorf("Expected %d arguments, got %d", originalArgsLen, len(cmd.Args))
-	}
+	assert.Equal(t, originalArgsLen, len(cmd.Args), "No additional arguments should be added when none provided")
 }
 
 func TestTaskExecute_StdoutStderrAssignment(t *testing.T) {
@@ -106,23 +101,15 @@ func TestTaskExecute_StdoutStderrAssignment(t *testing.T) {
 	}
 
 	// Initially stdout and stderr should be nil
-	if cmd.Stdout != nil {
-		t.Error("Expected cmd.Stdout to be nil initially")
-	}
-	if cmd.Stderr != nil {
-		t.Error("Expected cmd.Stderr to be nil initially")
-	}
+	assert.Nil(t, cmd.Stdout, "cmd.Stdout should be nil initially")
+	assert.Nil(t, cmd.Stderr, "cmd.Stderr should be nil initially")
 
 	// Execute the task
 	manager.CommandExecute(cmd)
 
 	// Verify that stdout and stderr are set to os.Stdout and os.Stderr
-	if cmd.Stdout != os.Stdout {
-		t.Error("Expected cmd.Stdout to be set to os.Stdout")
-	}
-	if cmd.Stderr != os.Stderr {
-		t.Error("Expected cmd.Stderr to be set to os.Stderr")
-	}
+	assert.Equal(t, os.Stdout, cmd.Stdout, "cmd.Stdout should be set to os.Stdout")
+	assert.Equal(t, os.Stderr, cmd.Stderr, "cmd.Stderr should be set to os.Stderr")
 }
 
 func TestTaskExecute_CommandNotFound(t *testing.T) {
@@ -130,10 +117,9 @@ func TestTaskExecute_CommandNotFound(t *testing.T) {
 	cmd := exec.Command("nonexistentcommand12345")
 
 	// Execute the task - should handle the error gracefully
-	manager.CommandExecute(cmd)
-
-	// The function should return without panicking
-	// This test passes if no panic occurs
+	assert.NotPanics(t, func() {
+		manager.CommandExecute(cmd)
+	}, "CommandExecute should handle non-existent commands gracefully without panicking")
 }
 
 func TestTaskExecute_EmptyCommand(t *testing.T) {
@@ -141,8 +127,7 @@ func TestTaskExecute_EmptyCommand(t *testing.T) {
 	cmd := exec.Command("")
 
 	// Execute the task - should handle the error gracefully
-	manager.CommandExecute(cmd)
-
-	// The function should return without panicking
-	// This test passes if no panic occurs
+	assert.NotPanics(t, func() {
+		manager.CommandExecute(cmd)
+	}, "CommandExecute should handle empty commands gracefully without panicking")
 }

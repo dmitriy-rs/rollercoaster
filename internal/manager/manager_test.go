@@ -6,6 +6,8 @@ import (
 
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // MockManager implements the Manager interface for testing
@@ -72,21 +74,11 @@ func TestFindClosestTask_ExactMatch(t *testing.T) {
 	mockManager := NewMockManager("Test Manager", tasks)
 
 	result, err := manager.FindClosestTask(mockManager, "build")
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
+	require.NoError(t, err, "Should not return error for exact match")
+	require.NotNil(t, result, "Should return a task for exact match")
 
-	if result == nil {
-		t.Fatal("Expected task, got nil")
-	}
-
-	if result.Name != "build" {
-		t.Errorf("Expected task name 'build', got '%s'", result.Name)
-	}
-
-	if result.Description != "Build the application" {
-		t.Errorf("Expected description 'Build the application', got '%s'", result.Description)
-	}
+	assert.Equal(t, "build", result.Name, "Task name should match exactly")
+	assert.Equal(t, "Build the application", result.Description, "Task description should match")
 }
 
 func TestFindClosestTask_FuzzyMatch(t *testing.T) {
@@ -119,17 +111,10 @@ func TestFindClosestTask_FuzzyMatch(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result, err := manager.FindClosestTask(mockManager, tc.input)
-			if err != nil {
-				t.Fatalf("Expected no error, got: %v", err)
-			}
+			require.NoError(t, err, "Should not return error for fuzzy match")
+			require.NotNil(t, result, "Should return a task for fuzzy match")
 
-			if result == nil {
-				t.Fatal("Expected task, got nil")
-			}
-
-			if result.Name != tc.expected {
-				t.Errorf("Expected task name '%s', got '%s'", tc.expected, result.Name)
-			}
+			assert.Equal(t, tc.expected, result.Name, "Should return the expected fuzzy match")
 		})
 	}
 }
@@ -144,18 +129,11 @@ func TestFindClosestTask_NoMatch(t *testing.T) {
 	mockManager := NewMockManager("Test Manager", tasks)
 
 	result, err := manager.FindClosestTask(mockManager, "nonexistent")
-	if err == nil {
-		t.Fatal("Expected error for non-existent task")
-	}
-
-	if result != nil {
-		t.Error("Expected nil result for non-existent task")
-	}
+	assert.Error(t, err, "Should return error for non-existent task")
+	assert.Nil(t, result, "Should return nil result for non-existent task")
 
 	expectedError := "no task found for 'nonexistent'"
-	if err.Error() != expectedError {
-		t.Errorf("Expected error message '%s', got '%s'", expectedError, err.Error())
-	}
+	assert.Equal(t, expectedError, err.Error(), "Error message should match expected format")
 }
 
 func TestFindClosestTask_EmptyTaskList(t *testing.T) {
@@ -164,18 +142,11 @@ func TestFindClosestTask_EmptyTaskList(t *testing.T) {
 	mockManager := NewMockManager("Empty Manager", tasks)
 
 	result, err := manager.FindClosestTask(mockManager, "anything")
-	if err == nil {
-		t.Fatal("Expected error for empty task list")
-	}
-
-	if result != nil {
-		t.Error("Expected nil result for empty task list")
-	}
+	assert.Error(t, err, "Should return error for empty task list")
+	assert.Nil(t, result, "Should return nil result for empty task list")
 
 	expectedError := "no task found for 'anything'"
-	if err.Error() != expectedError {
-		t.Errorf("Expected error message '%s', got '%s'", expectedError, err.Error())
-	}
+	assert.Equal(t, expectedError, err.Error(), "Error message should match expected format")
 }
 
 func TestFindClosestTask_ListTasksError(t *testing.T) {
@@ -188,17 +159,9 @@ func TestFindClosestTask_ListTasksError(t *testing.T) {
 	mockManager.SetListError(expectedError)
 
 	result, err := manager.FindClosestTask(mockManager, "build")
-	if err == nil {
-		t.Fatal("Expected error when ListTasks fails")
-	}
-
-	if result != nil {
-		t.Error("Expected nil result when ListTasks fails")
-	}
-
-	if err != expectedError {
-		t.Errorf("Expected error '%v', got '%v'", expectedError, err)
-	}
+	assert.Error(t, err, "Should return error when ListTasks fails")
+	assert.Nil(t, result, "Should return nil result when ListTasks fails")
+	assert.Equal(t, expectedError, err, "Should return the exact error from ListTasks")
 }
 
 func TestFindClosestTask_MultipleMatches(t *testing.T) {
@@ -213,18 +176,11 @@ func TestFindClosestTask_MultipleMatches(t *testing.T) {
 
 	// Should return the best match (exact or closest)
 	result, err := manager.FindClosestTask(mockManager, "test")
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
-
-	if result == nil {
-		t.Fatal("Expected task, got nil")
-	}
+	require.NoError(t, err, "Should not return error for multiple matches")
+	require.NotNil(t, result, "Should return a task for multiple matches")
 
 	// Should match "test" exactly
-	if result.Name != "test" {
-		t.Errorf("Expected task name 'test', got '%s'", result.Name)
-	}
+	assert.Equal(t, "test", result.Name, "Should return exact match when available")
 }
 
 func TestFindClosestTask_SimilarNames(t *testing.T) {
@@ -266,17 +222,10 @@ func TestFindClosestTask_SimilarNames(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result, err := manager.FindClosestTask(mockManager, tc.input)
-			if err != nil {
-				t.Fatalf("Expected no error, got: %v", err)
-			}
+			require.NoError(t, err, "Should not return error for similar names")
+			require.NotNil(t, result, "Should return a task for similar names")
 
-			if result == nil {
-				t.Fatal("Expected task, got nil")
-			}
-
-			if result.Name != tc.expected {
-				t.Errorf("Expected task name '%s', got '%s'", tc.expected, result.Name)
-			}
+			assert.Equal(t, tc.expected, result.Name, "Should return the expected similar name match")
 		})
 	}
 }
@@ -321,17 +270,10 @@ func TestFindClosestTask_SpecialCharacters(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result, err := manager.FindClosestTask(mockManager, tc.input)
-			if err != nil {
-				t.Fatalf("Expected no error, got: %v", err)
-			}
+			require.NoError(t, err, "Should not return error for special characters")
+			require.NotNil(t, result, "Should return a task for special characters")
 
-			if result == nil {
-				t.Fatal("Expected task, got nil")
-			}
-
-			if result.Name != tc.expected {
-				t.Errorf("Expected task name '%s', got '%s'", tc.expected, result.Name)
-			}
+			assert.Equal(t, tc.expected, result.Name, "Should handle special characters correctly")
 		})
 	}
 }
@@ -348,13 +290,8 @@ func TestFindClosestTask_EmptySearchString(t *testing.T) {
 	// This reveals a bug in the original function: it returns (nil, nil) instead of (nil, error)
 	result, err := manager.FindClosestTask(mockManager, "")
 
-	if err != nil {
-		t.Fatalf("Expected no error (this is the current behavior), got: %v", err)
-	}
-
-	if result != nil {
-		t.Errorf("Expected nil result for empty search string, got: %v", result)
-	}
+	assert.NoError(t, err, "Current behavior: no error for empty search string")
+	assert.Nil(t, result, "Should return nil result for empty search string")
 
 	// Note: This test documents the current behavior which is arguably a bug.
 	// The function should probably return an error when no valid match is found,
@@ -370,31 +307,17 @@ func TestFindClosestTask_SingleTask(t *testing.T) {
 
 	// Test exact match
 	result, err := manager.FindClosestTask(mockManager, "build")
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
+	require.NoError(t, err, "Should not return error for exact match with single task")
+	require.NotNil(t, result, "Should return task for exact match with single task")
 
-	if result == nil {
-		t.Fatal("Expected task, got nil")
-	}
-
-	if result.Name != "build" {
-		t.Errorf("Expected task name 'build', got '%s'", result.Name)
-	}
+	assert.Equal(t, "build", result.Name, "Should return the single task for exact match")
 
 	// Test fuzzy match
 	result, err = manager.FindClosestTask(mockManager, "bui")
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
+	require.NoError(t, err, "Should not return error for fuzzy match with single task")
+	require.NotNil(t, result, "Should return task for fuzzy match with single task")
 
-	if result == nil {
-		t.Fatal("Expected task, got nil")
-	}
-
-	if result.Name != "build" {
-		t.Errorf("Expected task name 'build', got '%s'", result.Name)
-	}
+	assert.Equal(t, "build", result.Name, "Should return the single task for fuzzy match")
 }
 
 // Test MockManager functionality
@@ -403,9 +326,7 @@ func TestMockManager_GetTitle(t *testing.T) {
 	mockManager := NewMockManager(title, []task.Task{})
 
 	result := mockManager.GetTitle()
-	if result.Name != title {
-		t.Errorf("Expected title '%s', got '%s'", title, result.Name)
-	}
+	assert.Equal(t, title, result.Name, "GetTitle should return the correct title")
 }
 
 func TestMockManager_ListTasks(t *testing.T) {
@@ -417,21 +338,12 @@ func TestMockManager_ListTasks(t *testing.T) {
 	mockManager := NewMockManager("Test Manager", tasks)
 
 	result, err := mockManager.ListTasks()
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
-
-	if len(result) != len(tasks) {
-		t.Errorf("Expected %d tasks, got %d", len(tasks), len(result))
-	}
+	require.NoError(t, err, "ListTasks should not return error")
+	assert.Len(t, result, len(tasks), "Should return correct number of tasks")
 
 	for i, task := range tasks {
-		if result[i].Name != task.Name {
-			t.Errorf("Expected task name '%s', got '%s'", task.Name, result[i].Name)
-		}
-		if result[i].Description != task.Description {
-			t.Errorf("Expected task description '%s', got '%s'", task.Description, result[i].Description)
-		}
+		assert.Equal(t, task.Name, result[i].Name, "Task name should match at index %d", i)
+		assert.Equal(t, task.Description, result[i].Description, "Task description should match at index %d", i)
 	}
 }
 
@@ -441,17 +353,9 @@ func TestMockManager_ListTasksWithError(t *testing.T) {
 	mockManager.SetListError(expectedError)
 
 	result, err := mockManager.ListTasks()
-	if err == nil {
-		t.Fatal("Expected error, got nil")
-	}
-
-	if result != nil {
-		t.Error("Expected nil result when error occurs")
-	}
-
-	if err != expectedError {
-		t.Errorf("Expected error '%v', got '%v'", expectedError, err)
-	}
+	assert.Error(t, err, "Should return error when error is set")
+	assert.Nil(t, result, "Should return nil result when error occurs")
+	assert.Equal(t, expectedError, err, "Should return the exact error that was set")
 }
 
 func TestMockManager_ExecuteTask(t *testing.T) {
@@ -463,22 +367,13 @@ func TestMockManager_ExecuteTask(t *testing.T) {
 	mockManager.ExecuteTask(testTask, args...)
 
 	executed := mockManager.GetExecutedTasks()
-	if len(executed) != 1 {
-		t.Fatalf("Expected 1 executed task, got %d", len(executed))
-	}
+	require.Len(t, executed, 1, "Should have executed exactly one task")
 
-	if executed[0].Task != testTask {
-		t.Error("Expected executed task to match the input task")
-	}
-
-	if len(executed[0].Args) != len(args) {
-		t.Errorf("Expected %d args, got %d", len(args), len(executed[0].Args))
-	}
+	assert.Equal(t, testTask, executed[0].Task, "Executed task should match input task")
+	assert.Len(t, executed[0].Args, len(args), "Should have correct number of arguments")
 
 	for i, arg := range args {
-		if executed[0].Args[i] != arg {
-			t.Errorf("Expected arg '%s', got '%s'", arg, executed[0].Args[i])
-		}
+		assert.Equal(t, arg, executed[0].Args[i], "Argument should match at index %d", i)
 	}
 }
 
@@ -490,17 +385,10 @@ func TestMockManager_ExecuteTaskNoArgs(t *testing.T) {
 	mockManager.ExecuteTask(testTask)
 
 	executed := mockManager.GetExecutedTasks()
-	if len(executed) != 1 {
-		t.Fatalf("Expected 1 executed task, got %d", len(executed))
-	}
+	require.Len(t, executed, 1, "Should have executed exactly one task")
 
-	if executed[0].Task != testTask {
-		t.Error("Expected executed task to match the input task")
-	}
-
-	if len(executed[0].Args) != 0 {
-		t.Errorf("Expected 0 args, got %d", len(executed[0].Args))
-	}
+	assert.Equal(t, testTask, executed[0].Task, "Executed task should match input task")
+	assert.Empty(t, executed[0].Args, "Should have no arguments when none provided")
 }
 
 func TestMockManager_ClearExecutedTasks(t *testing.T) {
@@ -510,16 +398,12 @@ func TestMockManager_ClearExecutedTasks(t *testing.T) {
 	mockManager.ExecuteTask(testTask)
 
 	executed := mockManager.GetExecutedTasks()
-	if len(executed) != 1 {
-		t.Fatalf("Expected 1 executed task before clear, got %d", len(executed))
-	}
+	require.Len(t, executed, 1, "Should have one executed task before clear")
 
 	mockManager.ClearExecutedTasks()
 
 	executed = mockManager.GetExecutedTasks()
-	if len(executed) != 0 {
-		t.Errorf("Expected 0 executed tasks after clear, got %d", len(executed))
-	}
+	assert.Empty(t, executed, "Should have no executed tasks after clear")
 }
 
 func TestFindClosestTask_CaseSensitivity(t *testing.T) {
@@ -533,17 +417,10 @@ func TestFindClosestTask_CaseSensitivity(t *testing.T) {
 
 	// Test exact case match
 	result, err := manager.FindClosestTask(mockManager, "Build")
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
+	require.NoError(t, err, "Should not return error for exact case match")
+	require.NotNil(t, result, "Should return task for exact case match")
 
-	if result == nil {
-		t.Fatal("Expected task, got nil")
-	}
-
-	if result.Name != "Build" {
-		t.Errorf("Expected task name 'Build', got '%s'", result.Name)
-	}
+	assert.Equal(t, "Build", result.Name, "Should respect case sensitivity")
 }
 
 func TestFindClosestTask_VeryPoorMatch(t *testing.T) {
@@ -557,18 +434,11 @@ func TestFindClosestTask_VeryPoorMatch(t *testing.T) {
 
 	// Test with a string that has very poor fuzzy match
 	result, err := manager.FindClosestTask(mockManager, "xyz123")
-	if err == nil {
-		t.Fatal("Expected error for very poor match")
-	}
-
-	if result != nil {
-		t.Error("Expected nil result for very poor match")
-	}
+	assert.Error(t, err, "Should return error for very poor match")
+	assert.Nil(t, result, "Should return nil result for very poor match")
 
 	expectedError := "no task found for 'xyz123'"
-	if err.Error() != expectedError {
-		t.Errorf("Expected error message '%s', got '%s'", expectedError, err.Error())
-	}
+	assert.Equal(t, expectedError, err.Error(), "Error message should match expected format")
 }
 
 func TestFindClosestTask_TaskNameSliceCreation(t *testing.T) {
@@ -584,20 +454,10 @@ func TestFindClosestTask_TaskNameSliceCreation(t *testing.T) {
 	// Test that we can find each task
 	for _, expectedTask := range tasks {
 		result, err := manager.FindClosestTask(mockManager, expectedTask.Name)
-		if err != nil {
-			t.Fatalf("Expected no error for task '%s', got: %v", expectedTask.Name, err)
-		}
+		require.NoError(t, err, "Should not return error for task '%s'", expectedTask.Name)
+		require.NotNil(t, result, "Should return task for '%s'", expectedTask.Name)
 
-		if result == nil {
-			t.Fatalf("Expected task for '%s', got nil", expectedTask.Name)
-		}
-
-		if result.Name != expectedTask.Name {
-			t.Errorf("Expected task name '%s', got '%s'", expectedTask.Name, result.Name)
-		}
-
-		if result.Description != expectedTask.Description {
-			t.Errorf("Expected task description '%s', got '%s'", expectedTask.Description, result.Description)
-		}
+		assert.Equal(t, expectedTask.Name, result.Name, "Task name should match for '%s'", expectedTask.Name)
+		assert.Equal(t, expectedTask.Description, result.Description, "Task description should match for '%s'", expectedTask.Name)
 	}
 }

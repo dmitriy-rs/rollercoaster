@@ -1,10 +1,10 @@
 package task_test
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSortTasks(t *testing.T) {
@@ -115,9 +115,7 @@ func TestSortTasks(t *testing.T) {
 
 			task.SortTasks(input)
 
-			if !reflect.DeepEqual(input, tt.expected) {
-				t.Errorf("SortTasks() = %v, want %v", input, tt.expected)
-			}
+			assert.Equal(t, tt.expected, input, "SortTasks() should sort tasks correctly")
 		})
 	}
 }
@@ -138,9 +136,7 @@ func TestSortTasksStability(t *testing.T) {
 
 	task.SortTasks(tasks)
 
-	if !reflect.DeepEqual(tasks, expected) {
-		t.Errorf("SortTasks() stability test failed. Got %v, want %v", tasks, expected)
-	}
+	assert.Equal(t, expected, tasks, "SortTasks() should maintain stable sort order for equal elements")
 }
 
 func TestSortTasksModifiesOriginalSlice(t *testing.T) {
@@ -163,7 +159,5 @@ func TestSortTasksModifiesOriginalSlice(t *testing.T) {
 		{Name: "C", Description: "Third"},
 	}
 
-	if !reflect.DeepEqual(original, expected) {
-		t.Errorf("SortTasks() should modify original slice. Got %v, want %v", original, expected)
-	}
+	assert.Equal(t, expected, original, "SortTasks() should modify the original slice in place")
 }
