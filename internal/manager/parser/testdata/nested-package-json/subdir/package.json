@@ -1,0 +1,14 @@
+{
+  "name": "test-nested-package",
+  "version": "1.0.0",
+  "description": "Test nested package",
+  "main": "index.js",
+  "scripts": {
+    "start": "echo 'Starting nested package'",
+    "build": "echo 'Building nested package'",
+    "test": "echo 'Testing nested package'"
+  },
+  "dependencies": {
+    "react": "^18.2.0"
+  }
+} 

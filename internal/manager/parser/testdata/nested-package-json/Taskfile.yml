@@ -1,0 +1,12 @@
+version: '3'
+
+tasks:
+  build-all:
+    desc: "Build all projects"
+    cmds:
+      - echo "Building all projects"
+
+  test-all:
+    desc: "Test all projects"
+    cmds:
+      - echo "Testing all projects" 

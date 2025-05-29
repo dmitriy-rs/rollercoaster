@@ -1,0 +1,12 @@
+version: '3'
+
+tasks:
+  deploy:
+    desc: "Deploy the application"
+    cmds:
+      - echo "Deploying the application"
+
+  lint:
+    desc: "Run linters"
+    cmds:
+      - echo "Running linters" 

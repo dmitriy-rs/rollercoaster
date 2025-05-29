@@ -19,7 +19,7 @@ func ParseManager(dir *string) ([]manager.Manager, error) {
 		RootDir:    findClosestGitDir(dir),
 	}
 
-	jsWorkspace, err := jsmanager.ParseJsWorkspace(dir)
+	jsWorkspace, err := jsmanager.ParseJsWorkspace(&parseConfig.RootDir)
 	if err != nil {
 		logger.Warning(err.Error())
 	}
@@ -69,5 +69,5 @@ func findClosestGitDir(dir *string) string {
 		}
 		currentDir = parentDir
 	}
-	return ""
+	return *dir
 }

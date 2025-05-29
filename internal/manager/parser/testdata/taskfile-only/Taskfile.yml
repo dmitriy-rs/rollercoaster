@@ -1,0 +1,17 @@
+version: '3'
+
+tasks:
+  build:
+    desc: "Build the application"
+    cmds:
+      - echo "Building the application"
+
+  test:
+    desc: "Run tests"
+    cmds:
+      - echo "Running tests"
+
+  clean:
+    desc: "Clean build artifacts"
+    cmds:
+      - echo "Cleaning build artifacts" 
