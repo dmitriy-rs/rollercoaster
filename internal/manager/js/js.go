@@ -20,6 +20,7 @@ type JsManager struct {
 type internalManager interface {
 	Name() string
 	Cmd() *exec.Cmd
+	
 	RunCmd() *exec.Cmd
 	InstallCmd() *exec.Cmd
 	AddCmd() *exec.Cmd

@@ -10,6 +10,11 @@ import (
 )
 
 func ParseManager(dir *string) (manager.Manager, error) {
+	parseConfig := manager.ManagerParseConfig{
+		CurrentDir: *dir,
+		RootDir:    findClosestGitDir(dir),
+	}
+
 	manager, err := taskmanager.ParseTaskManager(dir)
 	if err != nil {
 		return nil, err
@@ -18,13 +23,8 @@ func ParseManager(dir *string) (manager.Manager, error) {
 		return manager, nil
 	}
 
-	gitDir := findClosestGitDir(dir)
-	if gitDir == "" {
 		logger.Warning("Could not find a task manager in the current directory or its parents")
 		return nil, nil
-	}
-
-	return taskmanager.ParseTaskManager(&gitDir)
 }
 
 func findClosestGitDir(dir *string) string {

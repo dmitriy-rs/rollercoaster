@@ -461,3 +461,89 @@ func TestFindClosestTask_TaskNameSliceCreation(t *testing.T) {
 		assert.Equal(t, expectedTask.Description, result.Description, "Task description should match for '%s'", expectedTask.Name)
 	}
 }
+
+func TestManagerParseConfig_GetDirectories_SameDirectory(t *testing.T) {
+	config := &manager.ManagerParseConfig{
+		CurrentDir: "/user/project",
+		RootDir:    "/user/project",
+	}
+
+	result := config.GetDirectories()
+	expected := []string{"/user/project"}
+
+	assert.Equal(t, expected, result, "Should return single directory when current equals root")
+	assert.Equal(t, len(expected), len(result), "Result should have expected length")
+}
+
+func TestManagerParseConfig_GetDirectories_EmptyRootDir(t *testing.T) {
+	config := &manager.ManagerParseConfig{
+		CurrentDir: "/user/test/path",
+		RootDir:    "",
+	}
+
+	result := config.GetDirectories()
+	expected := []string{"/user/test/path"}
+
+	assert.Equal(t, expected, result, "Should return only current dir when root is empty")
+	assert.Equal(t, len(expected), len(result), "Result should have expected length")
+}
+
+func TestManagerParseConfig_GetDirectories_EmptyCurrentDir(t *testing.T) {
+	config := &manager.ManagerParseConfig{
+		CurrentDir: "",
+		RootDir:    "/user",
+	}
+
+	result := config.GetDirectories()
+	expected := []string{"/user"}
+
+	assert.Equal(t, expected, result, "Should return only root dir when current is empty")
+	assert.Equal(t, len(expected), len(result), "Result should have expected length")
+}
+
+func TestManagerParseConfig_GetDirectories_BothEmpty(t *testing.T) {
+	config := &manager.ManagerParseConfig{
+		CurrentDir: "",
+		RootDir:    "",
+	}
+
+	result := config.GetDirectories()
+	expected := []string{""}
+
+	assert.Equal(t, expected, result, "Should return empty string when both are empty")
+	assert.Equal(t, len(expected), len(result), "Result should have expected length")
+}
+
+func TestManagerParseConfig_GetDirectories_SingleLevelDeep(t *testing.T) {
+	config := &manager.ManagerParseConfig{
+		CurrentDir: "/user/project",
+		RootDir:    "/user",
+	}
+
+	result := config.GetDirectories()
+	expected := []string{"/user", "/user/project"}
+
+	assert.Equal(t, expected, result, "Should handle single level nesting correctly")
+	assert.Equal(t, len(expected), len(result), "Result should have expected length")
+
+	// Verify order is correct
+	assert.Equal(t, "/user", result[0], "First directory should be root directory")
+	assert.Equal(t, "/user/project", result[len(result)-1], "Last directory should be current directory")
+}
+
+func TestManagerParseConfig_GetDirectories_DeepNesting(t *testing.T) {
+	config := &manager.ManagerParseConfig{
+		CurrentDir: "/user/projects/myapp/src/components/ui",
+		RootDir:    "/user/projects",
+	}
+
+	result := config.GetDirectories()
+	expected := []string{"/user/projects", "/user/projects/myapp", "/user/projects/myapp/src", "/user/projects/myapp/src/components", "/user/projects/myapp/src/components/ui"}
+
+	assert.Equal(t, expected, result, "Should handle deep directory nesting correctly")
+	assert.Equal(t, len(expected), len(result), "Result should have expected length")
+
+	// Verify order is correct
+	assert.Equal(t, "/user/projects", result[0], "First directory should be root directory")
+	assert.Equal(t, "/user/projects/myapp/src/components/ui", result[len(result)-1], "Last directory should be current directory")
+}
