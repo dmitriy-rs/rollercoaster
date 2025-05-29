@@ -8,6 +8,7 @@ import (
 type Task struct {
 	Name        string
 	Description string
+	Aliases     []string
 }
 
 func SortTasks(tasks []Task) {

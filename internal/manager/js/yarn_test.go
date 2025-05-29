@@ -87,12 +87,12 @@ func TestYarnWorkspace_InstallCmd(t *testing.T) {
 	assert.Equal(t, expectedArgs, cmd.Args, "YarnWorkspace.InstallCmd() should return correct args")
 }
 
-func TestYarnWorkspace_RunCmd(t *testing.T) {
+func TestYarnWorkspace_ExecuteCmd(t *testing.T) {
 	workspace := &jsmanager.YarnWorkspace{}
-	cmd := workspace.RunCmd()
+	cmd := workspace.ExecuteCmd()
 
 	expectedArgs := []string{"yarn", "run"}
-	assert.Equal(t, expectedArgs, cmd.Args, "YarnWorkspace.RunCmd() should return correct args")
+	assert.Equal(t, expectedArgs, cmd.Args, "YarnWorkspace.ExecuteCmd() should return correct args")
 }
 
 func TestYarnWorkspace_AddCmd(t *testing.T) {

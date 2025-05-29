@@ -82,7 +82,7 @@ func TestPnpmWorkspace_Cmd(t *testing.T) {
 	workspace := &jsmanager.PnpmWorkspace{}
 	cmd := workspace.Cmd()
 
-	expectedArgs := []string{"pnpm"}
+	expectedArgs := []string{"pnpm", "run"}
 	assert.Equal(t, expectedArgs, cmd.Args, "PnpmWorkspace.Cmd() should return correct args")
 }
 
@@ -94,12 +94,12 @@ func TestPnpmWorkspace_InstallCmd(t *testing.T) {
 	assert.Equal(t, expectedArgs, cmd.Args, "PnpmWorkspace.InstallCmd() should return correct args")
 }
 
-func TestPnpmWorkspace_RunCmd(t *testing.T) {
+func TestPnpmWorkspace_ExecuteCmd(t *testing.T) {
 	workspace := &jsmanager.PnpmWorkspace{}
-	cmd := workspace.RunCmd()
+	cmd := workspace.ExecuteCmd()
 
-	expectedArgs := []string{"pnpm", "run"}
-	assert.Equal(t, expectedArgs, cmd.Args, "PnpmWorkspace.RunCmd() should return correct args")
+	expectedArgs := []string{"pnpx"}
+	assert.Equal(t, expectedArgs, cmd.Args, "PnpmWorkspace.ExecuteCmd() should return correct args")
 }
 
 func TestPnpmWorkspace_AddCmd(t *testing.T) {

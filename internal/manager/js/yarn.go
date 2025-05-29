@@ -37,6 +37,10 @@ func (m *YarnWorkspace) Name() string {
 	return "yarn"
 }
 
+func (m *YarnWorkspace) ExecName() string {
+	return "yarn run"
+}
+
 func (m *YarnWorkspace) Cmd() *exec.Cmd {
 	return exec.Command("yarn")
 }
@@ -45,7 +49,7 @@ func (m *YarnWorkspace) InstallCmd() *exec.Cmd {
 	return exec.Command("yarn", "install")
 }
 
-func (m *YarnWorkspace) RunCmd() *exec.Cmd {
+func (m *YarnWorkspace) ExecuteCmd() *exec.Cmd {
 	return exec.Command("yarn", "run")
 }
 

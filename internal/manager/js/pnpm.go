@@ -53,12 +53,16 @@ func (m *PnpmWorkspace) Name() string {
 	}
 }
 
-func (m *PnpmWorkspace) Cmd() *exec.Cmd {
-	return exec.Command("pnpm")
+func (m *PnpmWorkspace) ExecName() string {
+	return "pnpx"
 }
 
-func (m *PnpmWorkspace) RunCmd() *exec.Cmd {
+func (m *PnpmWorkspace) Cmd() *exec.Cmd {
 	return exec.Command("pnpm", "run")
+}
+
+func (m *PnpmWorkspace) ExecuteCmd() *exec.Cmd {
+	return exec.Command("pnpx")
 }
 
 func (m *PnpmWorkspace) InstallCmd() *exec.Cmd {

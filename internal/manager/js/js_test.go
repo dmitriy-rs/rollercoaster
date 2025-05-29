@@ -1,80 +1,15 @@
 package jsmanager_test
 
 import (
-	"os/exec"
 	"path/filepath"
 	"testing"
 
 	jsmanager "github.com/dmitriy-rs/rollercoaster/internal/manager/js"
+	"github.com/dmitriy-rs/rollercoaster/internal/manager/js/mocks"
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// MockJsWorkspace implements the JsWorkspace interface for testing
-type MockJsWorkspace struct {
-	name         string
-	cmdArgs      []string
-	runCmdArgs   []string
-	installArgs  []string
-	addArgs      []string
-	removeArgs   []string
-	executedCmds [][]string
-}
-
-func NewMockJsWorkspace(name string) *MockJsWorkspace {
-	return &MockJsWorkspace{
-		name:         name,
-		cmdArgs:      []string{name},
-		runCmdArgs:   []string{name, "run"},
-		installArgs:  []string{name, "install"},
-		addArgs:      []string{name, "add"},
-		removeArgs:   []string{name, "remove"},
-		executedCmds: make([][]string, 0),
-	}
-}
-
-func (m *MockJsWorkspace) Name() string {
-	return m.name
-}
-
-func (m *MockJsWorkspace) Cmd() *exec.Cmd {
-	cmd := exec.Command("echo", m.cmdArgs...)
-	m.executedCmds = append(m.executedCmds, cmd.Args)
-	return cmd
-}
-
-func (m *MockJsWorkspace) RunCmd() *exec.Cmd {
-	cmd := exec.Command("echo", m.runCmdArgs...)
-	m.executedCmds = append(m.executedCmds, cmd.Args)
-	return cmd
-}
-
-func (m *MockJsWorkspace) InstallCmd() *exec.Cmd {
-	cmd := exec.Command("echo", m.installArgs...)
-	m.executedCmds = append(m.executedCmds, cmd.Args)
-	return cmd
-}
-
-func (m *MockJsWorkspace) AddCmd() *exec.Cmd {
-	cmd := exec.Command("echo", m.addArgs...)
-	m.executedCmds = append(m.executedCmds, cmd.Args)
-	return cmd
-}
-
-func (m *MockJsWorkspace) RemoveCmd() *exec.Cmd {
-	cmd := exec.Command("echo", m.removeArgs...)
-	m.executedCmds = append(m.executedCmds, cmd.Args)
-	return cmd
-}
-
-func (m *MockJsWorkspace) GetExecutedCommands() [][]string {
-	return m.executedCmds
-}
-
-func (m *MockJsWorkspace) ClearExecutedCommands() {
-	m.executedCmds = make([][]string, 0)
-}
 
 func TestParseJsManager(t *testing.T) {
 	tests := []struct {
@@ -88,7 +23,7 @@ func TestParseJsManager(t *testing.T) {
 		{
 			name:        "empty directory (no package.json)",
 			testdataDir: "empty",
-			workspace:   func() *jsmanager.JsWorkspace { w := jsmanager.JsWorkspace(NewMockJsWorkspace("npm")); return &w }(),
+			workspace:   mocks.NewMockJsWorkspace("npm").ToJsWorkspacePtr(),
 			wantNil:     true,
 			wantError:   false,
 			wantScripts: 0,
@@ -96,7 +31,7 @@ func TestParseJsManager(t *testing.T) {
 		{
 			name:        "package.json without scripts",
 			testdataDir: "no-scripts",
-			workspace:   func() *jsmanager.JsWorkspace { w := jsmanager.JsWorkspace(NewMockJsWorkspace("npm")); return &w }(),
+			workspace:   mocks.NewMockJsWorkspace("npm").ToJsWorkspacePtr(),
 			wantNil:     false,
 			wantError:   false,
 			wantScripts: 0,
@@ -104,7 +39,7 @@ func TestParseJsManager(t *testing.T) {
 		{
 			name:        "package.json with scripts",
 			testdataDir: "with-scripts",
-			workspace:   func() *jsmanager.JsWorkspace { w := jsmanager.JsWorkspace(NewMockJsWorkspace("npm")); return &w }(),
+			workspace:   mocks.NewMockJsWorkspace("npm").ToJsWorkspacePtr(),
 			wantNil:     false,
 			wantError:   false,
 			wantScripts: 3,
@@ -146,10 +81,10 @@ func TestParseJsManager(t *testing.T) {
 
 func TestJsManager_ListTasks(t *testing.T) {
 	testDir := filepath.Join("testdata", "with-scripts")
-	mockWorkspace := NewMockJsWorkspace("npm")
-	workspace := jsmanager.JsWorkspace(mockWorkspace)
+	mockWorkspace := mocks.NewMockJsWorkspace("npm")
+	workspace := mockWorkspace.ToJsWorkspacePtr()
 
-	manager, err := jsmanager.ParseJsManager(&testDir, &workspace)
+	manager, err := jsmanager.ParseJsManager(&testDir, workspace)
 	require.NoError(t, err, "ParseJsManager() should not return error")
 	require.NotNil(t, manager, "ParseJsManager() should return manager")
 
@@ -170,10 +105,10 @@ func TestJsManager_ListTasks(t *testing.T) {
 
 func TestJsManager_ExecuteTask(t *testing.T) {
 	testDir := filepath.Join("testdata", "with-scripts")
-	mockWorkspace := NewMockJsWorkspace("npm")
-	workspace := jsmanager.JsWorkspace(mockWorkspace)
+	mockWorkspace := mocks.NewMockJsWorkspace("npm")
+	workspace := mockWorkspace.ToJsWorkspacePtr()
 
-	manager, err := jsmanager.ParseJsManager(&testDir, &workspace)
+	manager, err := jsmanager.ParseJsManager(&testDir, workspace)
 	require.NoError(t, err, "ParseJsManager() should not return error")
 	require.NotNil(t, manager, "ParseJsManager() should return manager")
 
@@ -223,26 +158,26 @@ func TestJsManager_GetTitle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testDir := filepath.Join("testdata", "with-scripts")
-			mockWorkspace := NewMockJsWorkspace(tt.workspaceName)
-			workspace := jsmanager.JsWorkspace(mockWorkspace)
+			mockWorkspace := mocks.NewMockJsWorkspace(tt.workspaceName)
+			workspace := mockWorkspace.ToJsWorkspacePtr()
 
-			manager, err := jsmanager.ParseJsManager(&testDir, &workspace)
+			manager, err := jsmanager.ParseJsManager(&testDir, workspace)
 			require.NoError(t, err, "ParseJsManager() should not return error")
 			require.NotNil(t, manager, "ParseJsManager() should return manager")
 
 			title := manager.GetTitle()
 			assert.Equal(t, tt.expectedName, title.Name, "Title name should match workspace name")
-			assert.Equal(t, "task runner. parsed from package.json", title.Description, "Title description should be correct")
+			assert.Equal(t, "package manager. parsed from package.json", title.Description, "Title description should be correct")
 		})
 	}
 }
 
 func TestJsManager_ExecuteTaskWithMultipleArgs(t *testing.T) {
 	testDir := filepath.Join("testdata", "with-scripts")
-	mockWorkspace := NewMockJsWorkspace("yarn")
-	workspace := jsmanager.JsWorkspace(mockWorkspace)
+	mockWorkspace := mocks.NewMockJsWorkspace("yarn")
+	workspace := mockWorkspace.ToJsWorkspacePtr()
 
-	manager, err := jsmanager.ParseJsManager(&testDir, &workspace)
+	manager, err := jsmanager.ParseJsManager(&testDir, workspace)
 	require.NoError(t, err, "ParseJsManager() should not return error")
 	require.NotNil(t, manager, "ParseJsManager() should return manager")
 
@@ -268,10 +203,10 @@ func TestJsManager_ExecuteTaskWithMultipleArgs(t *testing.T) {
 
 func TestJsManager_ExecuteTaskNoArgs(t *testing.T) {
 	testDir := filepath.Join("testdata", "with-scripts")
-	mockWorkspace := NewMockJsWorkspace("pnpm")
-	workspace := jsmanager.JsWorkspace(mockWorkspace)
+	mockWorkspace := mocks.NewMockJsWorkspace("pnpm")
+	workspace := mockWorkspace.ToJsWorkspacePtr()
 
-	manager, err := jsmanager.ParseJsManager(&testDir, &workspace)
+	manager, err := jsmanager.ParseJsManager(&testDir, workspace)
 	require.NoError(t, err, "ParseJsManager() should not return error")
 	require.NotNil(t, manager, "ParseJsManager() should return manager")
 
@@ -296,7 +231,7 @@ func TestJsManager_ExecuteTaskNoArgs(t *testing.T) {
 }
 
 func TestMockJsWorkspace_AllMethods(t *testing.T) {
-	workspace := NewMockJsWorkspace("test-workspace")
+	workspace := mocks.NewMockJsWorkspace("test-workspace")
 
 	// Test Name
 	assert.Equal(t, "test-workspace", workspace.Name(), "Name() should return correct name")
@@ -308,9 +243,9 @@ func TestMockJsWorkspace_AllMethods(t *testing.T) {
 	cmd := workspace.Cmd()
 	assert.Equal(t, []string{"echo", "test-workspace"}, cmd.Args, "Cmd() should return correct args")
 
-	// Test RunCmd
-	runCmd := workspace.RunCmd()
-	assert.Equal(t, []string{"echo", "test-workspace", "run"}, runCmd.Args, "RunCmd() should return correct args")
+	// Test ExecuteCmd
+	runCmd := workspace.ExecuteCmd()
+	assert.Equal(t, []string{"echo", "test-workspace", "run"}, runCmd.Args, "ExecuteCmd() should return correct args")
 
 	// Test InstallCmd
 	installCmd := workspace.InstallCmd()

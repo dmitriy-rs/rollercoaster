@@ -55,6 +55,6 @@ func (m *JsManager) ExecuteTask(task *task.Task, args ...string) {
 func (m *JsManager) GetTitle() manager.Title {
 	return manager.Title{
 		Name:        (*m.workspace).Name(),
-		Description: "task runner. parsed from " + m.filename,
+		Description: "package manager. parsed from " + m.filename,
 	}
 }
