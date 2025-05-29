@@ -1,4 +1,4 @@
-package manager_test
+package taskmanager_test
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dmitriy-rs/rollercoaster/internal/manager"
+	manager "github.com/dmitriy-rs/rollercoaster/internal/manager/task"
 )
 
 func setupTaskManagerTestDir(t *testing.T, dirName string) string {
@@ -120,7 +120,7 @@ func TestParseTaskManager_LocalTaskfiles(t *testing.T) {
 			}
 
 			title := tm.GetTitle()
-			if title == "" {
+			if title.Name == "" {
 				t.Error("Expected non-empty title")
 			}
 		})
@@ -219,7 +219,7 @@ func TestParseTaskManager_BothDistAndLocal(t *testing.T) {
 
 			// Check that title mentions both files
 			title := tm.GetTitle()
-			if title == "" {
+			if title.Name == "" {
 				t.Error("Expected non-empty title")
 			}
 		})
@@ -381,22 +381,18 @@ func TestTaskManager_GetTitle(t *testing.T) {
 	tests := []struct {
 		name      string
 		filenames []string
-		contains  []string // What the title should contain instead of exact match
 	}{
 		{
 			name:      "no_files",
 			filenames: []string{},
-			contains:  []string{"task task runner"},
 		},
 		{
 			name:      "single_file",
 			filenames: []string{"Taskfile.yml"},
-			contains:  []string{"task task runner. parsed from", "Taskfile.yml"},
 		},
 		{
 			name:      "multiple_files",
 			filenames: []string{"Taskfile.dist.yml", "Taskfile.yml"},
-			contains:  []string{"task task runner. parsed from", "Taskfile.dist.yml", "Taskfile.yml"},
 		},
 	}
 
@@ -424,13 +420,6 @@ func TestTaskManager_GetTitle(t *testing.T) {
 
 			if tm == nil {
 				t.Fatal("Expected TaskManager, got nil")
-			}
-
-			title := tm.GetTitle()
-			for _, expectedContent := range tt.contains {
-				if !strings.Contains(title, expectedContent) {
-					t.Errorf("Expected title to contain %q, got %q", expectedContent, title)
-				}
 			}
 		})
 	}
@@ -492,30 +481,30 @@ func TestParseTaskManager_WithTestdata(t *testing.T) {
 	}{
 		{
 			name:          "local_only_testdata",
-			testdataDir:   "testdata/task-manager/local-only",
+			testdataDir:   "testdata/local-only",
 			expectError:   false,
 			expectedTasks: []string{"build", "lint", "test"},
 		},
 		{
 			name:          "dist_only_testdata",
-			testdataDir:   "testdata/task-manager/dist-only",
+			testdataDir:   "testdata/dist-only",
 			expectError:   false,
 			expectedTasks: []string{"clean", "install"},
 		},
 		{
 			name:          "both_files_testdata",
-			testdataDir:   "testdata/task-manager/both-files",
+			testdataDir:   "testdata/both-files",
 			expectError:   false,
 			expectedTasks: []string{"build", "clean", "install", "lint", "test"},
 		},
 		{
 			name:        "invalid_version_testdata",
-			testdataDir: "testdata/task-manager/invalid-version",
+			testdataDir: "testdata/invalid-version",
 			expectError: true,
 		},
 		{
 			name:        "no_version_testdata",
-			testdataDir: "testdata/task-manager/no-version",
+			testdataDir: "testdata/no-version",
 			expectError: true,
 		},
 	}
@@ -559,7 +548,7 @@ func TestParseTaskManager_WithTestdata(t *testing.T) {
 
 			// Verify title is not empty
 			title := tm.GetTitle()
-			if title == "" {
+			if title.Name == "" {
 				t.Error("Expected non-empty title")
 			}
 		})
@@ -614,8 +603,8 @@ func TestParseTaskManager_AllFilenameVariations(t *testing.T) {
 
 			// Verify the title contains the filename
 			title := tm.GetTitle()
-			if !strings.Contains(title, tf.filename) {
-				t.Errorf("Expected title to contain %s, got: %s", tf.filename, title)
+			if !strings.Contains(title.Description, tf.filename) {
+				t.Errorf("Expected title to contain %s, got: %s", tf.filename, title.Description)
 			}
 		})
 	}

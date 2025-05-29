@@ -1,13 +1,13 @@
-package manager
+package taskmanager
 
 import (
 	"errors"
 	"os/exec"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	configfile "github.com/dmitriy-rs/rollercoaster/internal/configFile"
+	"github.com/dmitriy-rs/rollercoaster/internal/manager"
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
-	"github.com/dmitriy-rs/rollercoaster/internal/ui"
 )
 
 type TaskManager struct {
@@ -40,8 +40,8 @@ var distTaskFilenames = [4]string{
 func ParseTaskManager(dir *string) (*TaskManager, error) {
 	tm := &TaskManager{}
 
-	localFile := FindFirstInDirectory(dir, localTaskFilenames[:])
-	distFile := FindFirstInDirectory(dir, distTaskFilenames[:])
+	localFile := configfile.FindFirstInDirectory(dir, localTaskFilenames[:])
+	distFile := configfile.FindFirstInDirectory(dir, distTaskFilenames[:])
 
 	if distFile != nil {
 		config, err := parseConfig(distFile)
@@ -72,8 +72,8 @@ func ParseTaskManager(dir *string) (*TaskManager, error) {
 	return tm, nil
 }
 
-func parseConfig(file *ManagerFile) (*TaskManagerConfig, error) {
-	config, err := ParseFileAsYaml[TaskManagerConfig](file)
+func parseConfig(file *configfile.ConfigFile) (*TaskManagerConfig, error) {
+	config, err := configfile.ParseFileAsYaml[TaskManagerConfig](file)
 	if err != nil {
 		return nil, err
 	}
@@ -106,14 +106,18 @@ func (tm *TaskManager) ListTasks() ([]task.Task, error) {
 
 func (tm *TaskManager) ExecuteTask(task *task.Task, args ...string) {
 	cmd := exec.Command("task", task.Name)
-	CommandExecute(cmd, args...)
+	manager.CommandExecute(cmd, args...)
 }
 
-
-
-func (tm *TaskManager) GetTitle() string {
+func (tm *TaskManager) GetTitle() manager.Title {
 	if len(tm.filenames) == 0 {
-		return ui.TaskNameStyle.Render("task") + ui.TextColor.Render(" task runner")
+		return manager.Title{
+			Name:        "task",
+			Description: "task runner",
+		}
 	}
-	return ui.TaskNameStyle.Render("task") + ui.TextColor.Render(" task runner. parsed from "+strings.Join(tm.filenames, ", "))
+	return manager.Title{
+		Name:        "task",
+		Description: "task runner. parsed from " + strings.Join(tm.filenames, ", "),
+	}
 }

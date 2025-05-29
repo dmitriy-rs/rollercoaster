@@ -1,4 +1,4 @@
-package manager
+package configfile
 
 import (
 	"encoding/json"
@@ -11,12 +11,12 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-type ManagerFile struct {
+type ConfigFile struct {
 	Filename string
 	File     []byte
 }
 
-func ParseFileAsYaml[T any](mf *ManagerFile) (T, error) {
+func ParseFileAsYaml[T any](mf *ConfigFile) (T, error) {
 	var result T
 	err := yaml.Unmarshal(mf.File, &result)
 	if err != nil {
@@ -27,7 +27,7 @@ func ParseFileAsYaml[T any](mf *ManagerFile) (T, error) {
 	return result, nil
 }
 
-func ParseFileAsJson[T any](mf *ManagerFile) (T, error) {
+func ParseFileAsJson[T any](mf *ConfigFile) (T, error) {
 	var result T
 	err := json.Unmarshal(mf.File, &result)
 	if err != nil {
@@ -38,7 +38,7 @@ func ParseFileAsJson[T any](mf *ManagerFile) (T, error) {
 	return result, nil
 }
 
-func FindFirstInDirectory(dir *string, filenames []string) *ManagerFile {
+func FindFirstInDirectory(dir *string, filenames []string) *ConfigFile {
 	for _, filename := range filenames {
 		file := FindInDirectory(dir, filename)
 		if file != nil {
@@ -48,7 +48,7 @@ func FindFirstInDirectory(dir *string, filenames []string) *ManagerFile {
 	return nil
 }
 
-func FindInDirectory(dir *string, filename string) *ManagerFile {
+func FindInDirectory(dir *string, filename string) *ConfigFile {
 	if dir == nil {
 		logger.Error("Directory is nil", nil)
 		return nil
@@ -70,7 +70,7 @@ func FindInDirectory(dir *string, filename string) *ManagerFile {
 		return nil
 	}
 
-	return &ManagerFile{
+	return &ConfigFile{
 		Filename: fullPath,
 		File:     file,
 	}

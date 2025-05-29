@@ -5,6 +5,7 @@ import (
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
+	"github.com/dmitriy-rs/rollercoaster/internal/manager/parser"
 	"github.com/dmitriy-rs/rollercoaster/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -35,7 +36,7 @@ func execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	taskManager, err := manager.FindManager(&dir)
+	taskManager, err := parser.ParseManager(&dir)
 	if err != nil {
 		logger.Error("", err)
 		return err

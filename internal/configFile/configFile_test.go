@@ -1,10 +1,10 @@
-package manager_test
+package configfile_test
 
 import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dmitriy-rs/rollercoaster/internal/manager"
+	"github.com/dmitriy-rs/rollercoaster/internal/configFile"
 )
 
 // Test structures for JSON and YAML parsing
@@ -21,7 +21,7 @@ type TaskfileYAML struct {
 	Tasks   map[string]interface{} `yaml:"tasks"`
 }
 
-var testdataDir = "testdata/manager-file"
+var testdataDir = "testdata"
 
 func TestParseFileAsJson(t *testing.T) {
 	tests := []struct {
@@ -68,12 +68,12 @@ func TestParseFileAsJson(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mf := manager.FindInDirectory(&testdataDir, tt.filename)
+			mf := configfile.FindInDirectory(&testdataDir, tt.filename)
 			if mf == nil {
 				t.Fatalf("Failed to find test file: %s", tt.filename)
 			}
 
-			result, err := manager.ParseFileAsJson[PackageJSON](mf)
+			result, err := configfile.ParseFileAsJson[PackageJSON](mf)
 
 			if tt.expectError && err == nil {
 				t.Error("Expected error but got none")
@@ -129,12 +129,12 @@ func TestParseFileAsYaml(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mf := manager.FindInDirectory(&testdataDir, tt.filename)
+			mf := configfile.FindInDirectory(&testdataDir, tt.filename)
 			if mf == nil {
 				t.Fatalf("Failed to find test file: %s", tt.filename)
 			}
 
-			result, err := manager.ParseFileAsYaml[TaskfileYAML](mf)
+			result, err := configfile.ParseFileAsYaml[TaskfileYAML](mf)
 
 			if tt.expectError && err == nil {
 				t.Error("Expected error but got none")
@@ -197,7 +197,7 @@ func TestFindInDirectory(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := manager.FindInDirectory(tt.dir, tt.filename)
+			result := configfile.FindInDirectory(tt.dir, tt.filename)
 
 			if tt.expected && result == nil {
 				t.Error("Expected to find file but got nil")
@@ -260,7 +260,7 @@ func TestFindFirstInDirectory(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := manager.FindFirstInDirectory(tt.dir, tt.filenames)
+			result := configfile.FindFirstInDirectory(tt.dir, tt.filenames)
 
 			if tt.expected == "" && result != nil {
 				t.Error("Expected nil but got result")

@@ -29,8 +29,11 @@ func NewMockManager(title string, tasks []task.Task) *MockManager {
 	}
 }
 
-func (m *MockManager) GetTitle() string {
-	return m.title
+func (m *MockManager) GetTitle() manager.Title {
+	return manager.Title{
+		Name:        m.title,
+		Description: "",
+	}
 }
 
 func (m *MockManager) ListTasks() ([]task.Task, error) {
@@ -400,8 +403,8 @@ func TestMockManager_GetTitle(t *testing.T) {
 	mockManager := NewMockManager(title, []task.Task{})
 
 	result := mockManager.GetTitle()
-	if result != title {
-		t.Errorf("Expected title '%s', got '%s'", title, result)
+	if result.Name != title {
+		t.Errorf("Expected title '%s', got '%s'", title, result.Name)
 	}
 }
 
