@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -16,7 +16,7 @@ type PnpmWorkspace struct {
 const pnpmLockFilename = "pnpm-lock.yaml"
 
 func ParsePnpmWorkspace(dir *string) (*PnpmWorkspace, error) {
-	pnpmLockFile, err := os.OpenFile(path.Join(*dir, pnpmLockFilename), os.O_RDONLY, 0644)
+	pnpmLockFile, err := os.OpenFile(filepath.Join(*dir, pnpmLockFilename), os.O_RDONLY, 0644)
 	if err != nil {
 		return nil, nil
 	}

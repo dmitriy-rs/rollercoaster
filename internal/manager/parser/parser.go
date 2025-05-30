@@ -2,7 +2,7 @@ package parser
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"slices"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/config"
@@ -65,12 +65,12 @@ func findClosestGitDir(dir *string) string {
 	}
 	currentDir := *dir
 	for {
-		gitPath := path.Join(currentDir, ".git")
+		gitPath := filepath.Join(currentDir, ".git")
 		info, err := os.Stat(gitPath)
 		if err == nil && info.IsDir() {
 			return currentDir
 		}
-		parentDir := path.Dir(currentDir)
+		parentDir := filepath.Dir(currentDir)
 		if parentDir == currentDir {
 			break
 		}

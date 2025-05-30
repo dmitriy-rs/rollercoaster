@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
@@ -24,7 +24,7 @@ type JsWorkspace interface {
 }
 
 func ParseJsWorkspace(dir *string) (*JsWorkspace, error) {
-	_, err := os.Stat(path.Join(*dir, packageJsonFilename))
+	_, err := os.Stat(filepath.Join(*dir, packageJsonFilename))
 	if err != nil {
 		return nil, nil
 	}

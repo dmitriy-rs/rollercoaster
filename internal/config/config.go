@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -34,7 +34,7 @@ func (c *ParseConfig) GetDirectories() []string {
 	}
 
 	parsedDirectories := []string{}
-	for dir := currentDir; dir != rootDir; dir = path.Dir(dir) {
+	for dir := currentDir; dir != rootDir; dir = filepath.Dir(dir) {
 		parsedDirectories = append(parsedDirectories, dir)
 	}
 	parsedDirectories = append(parsedDirectories, rootDir)
@@ -93,7 +93,7 @@ func FindInDirectory(dir *string, filename string) *ConfigFile {
 		return nil
 	}
 
-	fullPath := path.Join(*dir, filename)
+	fullPath := filepath.Join(*dir, filename)
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 		return nil
 	}

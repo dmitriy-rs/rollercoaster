@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
@@ -17,6 +18,7 @@ var rootCmd = &cobra.Command{
 	SilenceErrors: false,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := execute(cmd, args); err != nil {
+			logger.Error("", err)
 			os.Exit(1)
 		}
 	},
@@ -32,13 +34,11 @@ func Execute() {
 func execute(cmd *cobra.Command, args []string) error {
 	dir, err := os.Getwd()
 	if err != nil {
-		logger.Error("Failed to get current working directory", err)
-		return err
+		return fmt.Errorf("failed to get current working directory: %w", err)
 	}
 
 	managers, err := parser.ParseManager(&dir)
 	if err != nil {
-		logger.Error("", err)
 		return err
 	}
 	if len(managers) == 0 {

@@ -11,13 +11,18 @@ WIP
 ### Pre-release tasks
 
 - [x] Default js workspace tasks (add, remove, install, npx)
-- [ ] CLI flag --cwd to start cli in different target directory
+- [ ] ~CLI flag --cwd to start cli in different target directory~
 - [ ] UI with task selection
 - [ ] If multiple task matches the query show the same selection UI with mached tasks
-- [ ] CLI flag --accept-first to always select first match instead of showing the UI
+- [ ] --accept-first config to always select first match instead of showing the UI
 - [ ] Show which letters where matched in UI
 - [ ] Fuzzy search on mistakes if `ilt` provided `lint` should be selected if available
 - [ ] Add Bun and Deno support
+
+### Think
+
+- [ ] Fallback js manager
+- [ ] 
 
 ### On-release tasks
 
