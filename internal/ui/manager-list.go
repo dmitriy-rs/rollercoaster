@@ -69,11 +69,30 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 }
 
 type managerModel struct {
-	list          list.Model
-	choice        task.Task
-	quitting      bool
-	managerTitles []manager.Title
-	taskCounts    []int
+	list                list.Model
+	choice              task.Task
+	quitting            bool
+	managerTitles       []manager.Title
+	taskCounts          []int
+	managerStartIndices []int // Track where each manager's tasks start
+}
+
+// getCurrentManagerIndex returns the index of the manager that contains the currently selected task
+func (m managerModel) getCurrentManagerIndex() int {
+	currentIndex := m.list.Index()
+	for i := len(m.managerStartIndices) - 1; i >= 0; i-- {
+		if currentIndex >= m.managerStartIndices[i] {
+			return i
+		}
+	}
+	return 0
+}
+
+// navigateToManager moves the cursor to the first task of the specified manager
+func (m *managerModel) navigateToManager(managerIndex int) {
+	if managerIndex >= 0 && managerIndex < len(m.managerStartIndices) {
+		m.list.Select(m.managerStartIndices[managerIndex])
+	}
 }
 
 func (m managerModel) Init() tea.Cmd {
@@ -98,6 +117,24 @@ func (m managerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.choice = task.Task(i)
 			}
 			return m, tea.Quit
+
+		case "left":
+			currentManager := m.getCurrentManagerIndex()
+			prevManager := currentManager - 1
+			if prevManager < 0 {
+				prevManager = len(m.managerStartIndices) - 1 // Circle to last manager
+			}
+			m.navigateToManager(prevManager)
+			return m, nil
+
+		case "right":
+			currentManager := m.getCurrentManagerIndex()
+			nextManager := currentManager + 1
+			if nextManager >= len(m.managerStartIndices) {
+				nextManager = 0 // Circle to first manager
+			}
+			m.navigateToManager(nextManager)
+			return m, nil
 		}
 	}
 
@@ -168,6 +205,16 @@ func (m managerModel) View() string {
 		}
 	}
 
+	// Add pagination if there are multiple pages
+	if m.list.Paginator.TotalPages > 1 {
+		result.WriteString("\n")
+		result.WriteString(m.list.Styles.PaginationStyle.Render(m.list.Paginator.View()))
+	}
+
+	// Add help text
+	result.WriteString("\n")
+	result.WriteString(m.list.Styles.HelpStyle.Render(m.list.Help.View(m.list)))
+
 	return result.String()
 }
 
@@ -180,8 +227,10 @@ func RenderManagerList(managers []manager.Manager) (*manager.Manager, *task.Task
 	var allItems []list.Item
 	var managerTitles []manager.Title
 	var managerTaskCounts []int
+	var managerStartIndices []int
 	var taskToManagerMap = make(map[string]manager.Manager) // Map task name to its manager
 
+	taskIndex := 0
 	for _, mgr := range managers {
 		tasks, err := mgr.ListTasks()
 		if err != nil {
@@ -194,10 +243,12 @@ func RenderManagerList(managers []manager.Manager) (*manager.Manager, *task.Task
 
 		managerTitles = append(managerTitles, mgr.GetTitle())
 		managerTaskCounts = append(managerTaskCounts, len(tasks))
+		managerStartIndices = append(managerStartIndices, taskIndex)
 
 		for _, t := range tasks {
 			allItems = append(allItems, taskItem(t))
 			taskToManagerMap[t.Name] = mgr // Store the mapping
+			taskIndex++
 		}
 	}
 
@@ -209,16 +260,17 @@ func RenderManagerList(managers []manager.Manager) (*manager.Manager, *task.Task
 
 	l := list.New(allItems, itemDelegate{}, defaultWidth, listHeight)
 	l.Title = ""
-	l.SetShowStatusBar(false)
+	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(false)
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
 
 	m := managerModel{
-		list:          l,
-		managerTitles: managerTitles,
-		taskCounts:    managerTaskCounts,
+		list:                l,
+		managerTitles:       managerTitles,
+		taskCounts:          managerTaskCounts,
+		managerStartIndices: managerStartIndices,
 	}
 
 	finalModel, err := tea.NewProgram(m).Run()
