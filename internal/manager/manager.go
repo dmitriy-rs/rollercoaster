@@ -2,11 +2,10 @@ package manager
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
-	"github.com/lithammer/fuzzysearch/fuzzy"
+	fuzzy "github.com/sahilm/fuzzy"
 )
 
 type Manager interface {
@@ -41,19 +40,18 @@ func FindClosestTask(manager Manager, arg string) (*task.Task, error) {
 	logger.Debug(fmt.Sprintf("Found tasks: %s", tasks))
 
 	taskNames := make([]string, len(tasks))
-	for _, t := range tasks {
-		taskNames = append(taskNames, t.Name)
+	for i, t := range tasks {
+		taskNames[i] = t.Name
 	}
 
-	matches := fuzzy.RankFind(arg, taskNames)
-	sort.Sort(matches)
+	matches := fuzzy.Find(arg, taskNames)
 
 	logger.Debug(fmt.Sprintf("Fuzzy matches for '%s': %v", arg, matches))
 
 	if len(matches) != 0 {
 		var matchedTask *task.Task
 		for _, task := range tasks {
-			if task.Name == matches[0].Target {
+			if task.Name == matches[0].Str {
 				matchedTask = &task
 				break
 			}

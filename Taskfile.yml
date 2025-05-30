@@ -30,3 +30,9 @@ tasks:
       - go build -o rollercoaster ./main.go 
     desc: "Build the binary for production"
     silent: true
+
+  install:
+    cmds:
+      - go install -ldflags "-X github.com/dmitriy-rs/rollercoaster/internal/logger.MODE=DEV"
+    desc: "Install the binary"
+    silent: true

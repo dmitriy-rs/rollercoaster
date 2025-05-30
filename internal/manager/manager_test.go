@@ -286,16 +286,12 @@ func TestFindClosestTask_EmptySearchString(t *testing.T) {
 
 	mockManager := NewMockManager("Test Manager", tasks)
 
-	// Empty string returns fuzzy matches but with empty targets that don't match task names
-	// This reveals a bug in the original function: it returns (nil, nil) instead of (nil, error)
 	result, err := manager.FindClosestTask(mockManager, "")
-
-	assert.NoError(t, err, "Current behavior: no error for empty search string")
+	assert.Error(t, err, "Should return error for empty search string")
 	assert.Nil(t, result, "Should return nil result for empty search string")
 
-	// Note: This test documents the current behavior which is arguably a bug.
-	// The function should probably return an error when no valid match is found,
-	// even if fuzzy search returns matches.
+	expectedError := "no task found for ''"
+	assert.Equal(t, expectedError, err.Error(), "Error message should match expected format")
 }
 
 func TestFindClosestTask_SingleTask(t *testing.T) {
