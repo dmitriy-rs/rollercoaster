@@ -98,10 +98,10 @@ func (m *JsWorkspaceManager) ListTasks() ([]task.Task, error) {
 			Description: "Install dependencies",
 			Aliases:     []string{WorkspaceInstallAliasTask},
 		},
-		{
-			Name:        WorkspaceExecuteTask,
-			Description: (*m.Workspace).ExecName() + " Execute a command",
-		},
+		// {
+		// 	Name:        WorkspaceExecuteTask,
+		// 	Description: (*m.Workspace).ExecName() + " Execute a command",
+		// },
 	}
 	return tasks, nil
 }

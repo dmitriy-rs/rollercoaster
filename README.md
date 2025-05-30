@@ -38,6 +38,7 @@ sudo mv rollercoaster /usr/local/bin/rollercoaster
 
 Type the name of the command to see all available actions in the current scope
 ```sh
+# will show the list with all available tasks
 rollercoaster
 ```
 
@@ -53,10 +54,10 @@ That's so simple as that :)
 
 ### Alias
 
-I suggest to create alias in your shell for the command. Something short and handy, I use `rc`
+I suggest to create alias in your shell for the command. Something short and handy, I use `r` ("run" mnemonic)
 ```zsh
 # ~/.zshenv
-alias rc="rollercoaster"
+alias r="rollercoaster"
 ```
 
 ## TODO

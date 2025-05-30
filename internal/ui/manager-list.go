@@ -12,12 +12,10 @@ import (
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
 )
 
-const listHeight = 14
-
 var (
 	titleStyle        = lipgloss.NewStyle().MarginLeft(2).Align(lipgloss.Center)
 	itemStyle         = lipgloss.NewStyle().PaddingLeft(4).Foreground(lipgloss.Color("#CCCCCC"))
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("75"))
+	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("39"))
 	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
 	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
 	quitTextStyle     = lipgloss.NewStyle().Margin(0, 0, 0, 0)
@@ -29,7 +27,11 @@ type taskItem task.Task
 func (t taskItem) Title() string       { return t.Name }
 func (t taskItem) FilterValue() string { return "" }
 
-type itemDelegate struct{}
+type itemDelegate struct {
+	managerTitles       []manager.Title
+	taskCounts          []int
+	managerStartIndices []int
+}
 
 func (d itemDelegate) Height() int                             { return 1 }
 func (d itemDelegate) Spacing() int                            { return 0 }
@@ -40,12 +42,21 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		return
 	}
 
-	description := i.Description
-	if len(description) > 50 {
-		description = description[:47] + "..."
+	// Find which manager this task belongs to
+	managerIndex := 0
+	for j := len(d.managerStartIndices) - 1; j >= 0; j-- {
+		if index >= d.managerStartIndices[j] {
+			managerIndex = j
+			break
+		}
 	}
 
-	titleWidth := 20
+	description := i.Description
+	if len(description) > 40 { // Shorter to make room for manager indicator
+		description = description[:37] + "..."
+	}
+
+	titleWidth := 18
 	title := i.Name
 	if len(title) > titleWidth {
 		title = title[:titleWidth-3] + "..."
@@ -53,14 +64,24 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 
 	paddedTitle := fmt.Sprintf("%-*s", titleWidth, title)
 
-	str := fmt.Sprintf("%d. %s %s", index+1, paddedTitle, description)
+	// Add manager indicator
+	managerIndicator := ""
+	if managerIndex < len(d.managerTitles) {
+		managerName := d.managerTitles[managerIndex].Name
+		if len(managerName) > 8 {
+			managerName = managerName[:8]
+		}
+		managerIndicator = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(fmt.Sprintf("[%s] ", managerName))
+	}
+
+	str := fmt.Sprintf("%d. %s%s %s", index+1, managerIndicator, paddedTitle, description)
 
 	fn := itemStyle.Render
 	if index == m.Index() {
+		boldTitle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).Render(paddedTitle)
+		highlightedDescription := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Render(description)
+		boldStr := fmt.Sprintf("%d. %s%s %s", index+1, managerIndicator, boldTitle, highlightedDescription)
 		fn = func(s ...string) string {
-			boldTitle := lipgloss.NewStyle().Bold(true).Render(paddedTitle)
-			highlightedDescription := lipgloss.NewStyle().Foreground(lipgloss.Color("75")).Render(description)
-			boldStr := fmt.Sprintf("%d. %s %s", index+1, boldTitle, highlightedDescription)
 			return selectedItemStyle.Render("> " + boldStr)
 		}
 	}
@@ -102,7 +123,8 @@ func (m managerModel) Init() tea.Cmd {
 func (m managerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.list.SetWidth(msg.Width)
+		// Use the list's built-in SetSize method which handles pagination properly
+		m.list.SetSize(msg.Width, msg.Height-4) // Leave space for help text
 		return m, nil
 
 	case tea.KeyMsg:
@@ -119,21 +141,11 @@ func (m managerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "left":
-			currentManager := m.getCurrentManagerIndex()
-			prevManager := currentManager - 1
-			if prevManager < 0 {
-				prevManager = len(m.managerStartIndices) - 1 // Circle to last manager
-			}
-			m.navigateToManager(prevManager)
+			m.list.PrevPage()
 			return m, nil
 
 		case "right":
-			currentManager := m.getCurrentManagerIndex()
-			nextManager := currentManager + 1
-			if nextManager >= len(m.managerStartIndices) {
-				nextManager = 0 // Circle to first manager
-			}
-			m.navigateToManager(nextManager)
+			m.list.NextPage()
 			return m, nil
 		}
 	}
@@ -151,71 +163,24 @@ func (m managerModel) View() string {
 		return quitTextStyle.Render("")
 	}
 
-	var result strings.Builder
-	taskIndex := 0
+	// Show current manager context at the top
+	currentManagerIndex := m.getCurrentManagerIndex()
+	var header strings.Builder
 
-	for i, managerTitle := range m.managerTitles {
-		// Render manager title
-		titleText := TaskNameStyle.Render(managerTitle.Name) + " " + TextColor.Render(managerTitle.Description)
-		titleWithPadding := lipgloss.NewStyle().MarginLeft(3).Render(titleText)
-		result.WriteString(titleWithPadding)
-		result.WriteString("\n")
+	if currentManagerIndex < len(m.managerTitles) {
+		currentManager := m.managerTitles[currentManagerIndex]
+		titleText := TaskNameStyle.Render(currentManager.Name) + " " + TextColor.Render(currentManager.Description)
 
-		// Render tasks for this manager
-		taskCount := m.taskCounts[i]
-		for j := 0; j < taskCount; j++ {
-			if taskIndex < len(m.list.Items()) {
-				item := m.list.Items()[taskIndex]
-				if taskItem, ok := item.(taskItem); ok {
-					// Format task similar to itemDelegate.Render
-					description := taskItem.Description
-					if len(description) > 50 {
-						description = description[:47] + "..."
-					}
-
-					titleWidth := 20
-					title := taskItem.Name
-					if len(title) > titleWidth {
-						title = title[:titleWidth-3] + "..."
-					}
-
-					paddedTitle := fmt.Sprintf("%-*s", titleWidth, title)
-					taskStr := fmt.Sprintf("%d. %s %s", j+1, paddedTitle, description)
-
-					// Apply selection styling if this is the current item
-					if taskIndex == m.list.Index() {
-						boldTitle := lipgloss.NewStyle().Bold(true).Render(paddedTitle)
-						highlightedDescription := lipgloss.NewStyle().Foreground(lipgloss.Color("75")).Render(description)
-						taskStr = fmt.Sprintf("%d. %s %s", j+1, boldTitle, highlightedDescription)
-						taskStr = selectedItemStyle.Render("> " + taskStr)
-					} else {
-						taskStr = itemStyle.Render(taskStr)
-					}
-
-					result.WriteString(taskStr)
-					result.WriteString("\n")
-				}
-			}
-			taskIndex++
-		}
-
-		// Add spacing between managers
-		if i < len(m.managerTitles)-1 {
-			result.WriteString("\n")
-		}
+		// Make "Manager:" greyish and the title bold
+		managerLabel := lipgloss.NewStyle().MarginLeft(2).Foreground(lipgloss.Color("240")).Render("Manager: ")
+		managerTitle := lipgloss.NewStyle().Bold(true).Render(titleText)
+		header.WriteString(managerLabel + managerTitle)
 	}
 
-	// Add pagination if there are multiple pages
-	if m.list.Paginator.TotalPages > 1 {
-		result.WriteString("\n")
-		result.WriteString(m.list.Styles.PaginationStyle.Render(m.list.Paginator.View()))
-	}
+	// Use the built-in list view for proper scrolling and pagination
+	listView := m.list.View()
 
-	// Add help text
-	result.WriteString("\n")
-	result.WriteString(m.list.Styles.HelpStyle.Render(m.list.Help.View(m.list)))
-
-	return result.String()
+	return header.String() + listView
 }
 
 func RenderManagerList(managers []manager.Manager) (*manager.Manager, *task.Task, error) {
@@ -257,8 +222,9 @@ func RenderManagerList(managers []manager.Manager) (*manager.Manager, *task.Task
 	}
 
 	const defaultWidth = 80
+	const defaultHeight = 14
 
-	l := list.New(allItems, itemDelegate{}, defaultWidth, listHeight)
+	l := list.New(allItems, itemDelegate{managerTitles, managerTaskCounts, managerStartIndices}, defaultWidth, defaultHeight)
 	l.Title = ""
 	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(false)

@@ -133,11 +133,11 @@ func TestJsWorkspaceManager_ListTasks(t *testing.T) {
 			description: "Install dependencies",
 			aliases:     []string{"i"},
 		},
-		{
-			name:        "x",
-			description: "testx Execute a command",
-			aliases:     nil,
-		},
+		// {
+		// 	name:        "x",
+		// 	description: "testx Execute a command",
+		// 	aliases:     nil,
+		// },
 	}
 
 	for i, expected := range expectedTasks {
@@ -175,11 +175,11 @@ func TestJsWorkspaceManager_ExecuteTask(t *testing.T) {
 			taskName:    "remove",
 			expectedCmd: []string{"echo", "test-workspace", "remove"},
 		},
-		{
-			name:        "execute task",
-			taskName:    "x",
-			expectedCmd: []string{"echo", "test-workspace", "run"},
-		},
+		// {
+		// 	name:        "execute task",
+		// 	taskName:    "x",
+		// 	expectedCmd: []string{"echo", "test-workspace", "run"},
+		// },
 		{
 			name:        "default task",
 			taskName:    "unknown",
