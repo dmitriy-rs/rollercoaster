@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var MODE = "DEV"
+var MODE = "PROD"
 
 var (
 	errStyle = lipgloss.NewStyle().

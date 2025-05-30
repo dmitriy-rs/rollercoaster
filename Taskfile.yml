@@ -21,12 +21,12 @@ tasks:
 
   build-dev:
     cmds:
-      - go build -o rollercoaster ./main.go
+      - go build -o rollercoaster -ldflags "-X github.com/dmitriy-rs/rollercoaster/internal/logger.MODE=DEV" ./main.go
     desc: "Build the binary"
     silent: true
 
   build:
     cmds:
-      - go build -ldflags "-X github.com/dmitriy-rs/rollercoaster/internal/logger.MODE=PROD" -o rollercoaster ./main.go 
+      - go build -o rollercoaster ./main.go 
     desc: "Build the binary for production"
     silent: true

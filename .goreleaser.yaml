@@ -13,7 +13,6 @@ builds:
       - darwin
     ldflags:
       - -s -w -X github.com/dmitriy-rs/rollercoaster/cmd.VERSION={{.Version}}
-      - -X github.com/dmitriy-rs/rollercoaster/internal/logger.MODE=PROD
 
 archives:
   - formats: [tar.gz]
@@ -36,6 +35,9 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+      - "^wip:"
+      - "^WIP:"
+      - "^wip"
 
 brews:
   - name: "{{ .ProjectName }}"

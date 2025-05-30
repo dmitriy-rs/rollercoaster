@@ -4,6 +4,19 @@ Running scripts without need to know the task/script manager. Roll on them like 
 
 ## Installation
 
+### Homebrew
+
+```sh
+brew tap dmitriy-rs/tap
+brew install rollercoaster
+```
+
+### Using Go
+
+```sh
+go install https://github.com/dmitriy-rs/rollercoaster@latest
+```
+
 ### From source
 
 ```sh
@@ -12,20 +25,13 @@ git clone https://github.com/dmitriy-rs/rollercoaster
 cd rollercoaster
 
 # Build and install
-go build -ldflags "-X github.com/dmitriy-rs/rollercoaster/internal/logger.MODE=PROD" -o rollercoaster ./main.go
+go build -o rollercoaster ./main.go
 ```
 
 Then place the binary somewhere in your PATH.
 ```sh
 # For example
 sudo mv rollercoaster /usr/local/bin/rollercoaster
-```
-
-### Homebrew
-
-```sh
-brew tap dmitriy-rs/tap
-brew install rollercoaster
 ```
 
 ## Usage
