@@ -22,7 +22,7 @@ WIP
 ### Think
 
 - [ ] Fallback js manager
-- [ ] 
+- [ ] Nested lock files with different package managers (why?)
 
 ### On-release tasks
 

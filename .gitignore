@@ -2,3 +2,4 @@ coverage.out
 coverage.html
 coverage_detailed.txt
 rollercoaster
+dist/
