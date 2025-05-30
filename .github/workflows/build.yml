@@ -43,7 +43,7 @@ jobs:
         run: go build -v ./...
         
       - name: Run tests
-        run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
+        run: go test -race -ldflags "-X github.com/dmitriy-rs/rollercoaster/internal/logger.MODE=TEST" -covermode=atomic -coverprofile=coverage.out ./...
         
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -71,4 +71,4 @@ jobs:
       run: go build -v ./...
 
     - name: Build binary
-      run: go build -ldflags "-X github.com/dmitriy-rs/rollercoaster/internal/logger.MODE=PROD" -o rollercoaster ./main.go
+      run: go build -o rollercoaster ./main.go
