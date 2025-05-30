@@ -55,6 +55,7 @@ That's so simple as that :)
 
 I suggest to create alias in your shell for the command. Something short and handy, I use `rc`
 ```zsh
+# ~/.zshenv
 alias rc="rollercoaster"
 ```
 
@@ -68,7 +69,7 @@ alias rc="rollercoaster"
 - [ ] If multiple task matches the query show the same selection UI with mached tasks
 - [ ] --accept-first config to always select first match instead of showing the UI
 - [ ] Show which letters where matched in UI
-- [ ] Fuzzy search on mistakes if `ilt` provided `lint` should be selected if available
+- [x] Fuzzy search on mistakes if `ilt` provided `lint` should be selected if available
 - [ ] Add Bun and Deno support
 
 ### Think

@@ -29,7 +29,7 @@ func ParseJsManager(dir *string, workspace *JsWorkspace) (*JsManager, error) {
 	}
 	manager := &JsManager{
 		config:    config,
-		filename:  packageJsonFilename,
+		filename:  packageJsonFile.Filename,
 		workspace: workspace,
 	}
 

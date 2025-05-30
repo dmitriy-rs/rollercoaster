@@ -3,3 +3,7 @@ coverage.html
 coverage_detailed.txt
 rollercoaster
 dist/
+
+# for local in-place testing
+package-lock.json
+package.json
