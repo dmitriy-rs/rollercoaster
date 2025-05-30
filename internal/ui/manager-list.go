@@ -76,13 +76,13 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		managerIndicator = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(fmt.Sprintf("%-8s", indicator))
 	}
 
-	str := fmt.Sprintf("%d. %s%s %s", index+1, managerIndicator, paddedTitle, description)
+	str := fmt.Sprintf("%2d. %s%s %s", index+1, managerIndicator, paddedTitle, description)
 
 	fn := itemStyle.Render
 	if index == m.Index() {
 		boldTitle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).Render(paddedTitle)
 		highlightedDescription := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Render(description)
-		boldStr := fmt.Sprintf("%d. %s%s %s", index+1, managerIndicator, boldTitle, highlightedDescription)
+		boldStr := fmt.Sprintf("%2d. %s%s %s", index+1, managerIndicator, boldTitle, highlightedDescription)
 		fn = func(s ...string) string {
 			return selectedItemStyle.Render("> " + boldStr)
 		}
@@ -144,10 +144,20 @@ func (m managerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "left":
 			m.list.PrevPage()
+			// Adjust selection if current index is beyond available items on this page
+			visibleItems := m.list.VisibleItems()
+			if len(visibleItems) > 0 && m.list.Index() >= len(visibleItems) {
+				m.list.Select(len(visibleItems) - 1)
+			}
 			return m, nil
 
 		case "right":
 			m.list.NextPage()
+			// Adjust selection if current index is beyond available items on this page
+			visibleItems := m.list.VisibleItems()
+			if len(visibleItems) > 0 && m.list.Index() >= len(visibleItems) {
+				m.list.Select(len(visibleItems) - 1)
+			}
 			return m, nil
 		}
 	}
