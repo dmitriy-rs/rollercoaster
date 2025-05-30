@@ -64,14 +64,16 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 
 	paddedTitle := fmt.Sprintf("%-*s", titleWidth, title)
 
-	// Add manager indicator
+	// Add manager indicator with fixed width for alignment
 	managerIndicator := ""
 	if managerIndex < len(d.managerTitles) {
 		managerName := d.managerTitles[managerIndex].Name
 		if len(managerName) > 8 {
 			managerName = managerName[:8]
 		}
-		managerIndicator = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(fmt.Sprintf("[%s] ", managerName))
+		// Create indicator like "[task]" then pad the whole thing to fixed width
+		indicator := fmt.Sprintf("[%s]", managerName)
+		managerIndicator = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(fmt.Sprintf("%-8s", indicator))
 	}
 
 	str := fmt.Sprintf("%d. %s%s %s", index+1, managerIndicator, paddedTitle, description)
