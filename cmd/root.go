@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var VERSION string
+var VERSION string = "dev"
 
 var rootCmd = &cobra.Command{
 	Use:           "rollercoaster [TASK_NAME|TASK_NAME_QUERY]",

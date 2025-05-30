@@ -4,7 +4,53 @@ Running scripts without need to know the task/script manager. Roll on them like 
 
 ## Installation
 
-WIP
+### From source
+
+```sh
+# Clone repo 
+git clone https://github.com/dmitriy-rs/rollercoaster
+cd rollercoaster
+
+# Build and install
+go build -ldflags "-X github.com/dmitriy-rs/rollercoaster/internal/logger.MODE=PROD" -o rollercoaster ./main.go
+```
+
+Then place the binary somewhere in your PATH.
+```sh
+# For example
+sudo mv rollercoaster /usr/local/bin/rollercoaster
+```
+
+### Homebrew
+
+```sh
+brew tap dmitriy-rs/tap
+brew install rollercoaster
+```
+
+## Usage
+
+Type the name of the command to see all available actions in the current scope
+```sh
+rollercoaster
+```
+
+Type some letters from the command to run one of the commands
+```sh
+# it will trigger pnpm lint command
+rollercoaster li
+# or ever will trigger the same action
+rollercoaster l
+```
+
+That's so simple as that :) 
+
+### Alias
+
+I suggest to create alias in your shell for the command. Something short and handy, I use `rc`
+```zsh
+alias rc="rollercoaster"
+```
 
 ## TODO
 
