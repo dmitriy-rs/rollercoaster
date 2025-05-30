@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -16,7 +16,7 @@ type YarnWorkspace struct {
 const yarnLockFilename = "yarn.lock"
 
 func ParseYarnWorkspace(dir *string) (*YarnWorkspace, error) {
-	yarnLockFile, err := os.OpenFile(path.Join(*dir, yarnLockFilename), os.O_RDONLY, 0644)
+	yarnLockFile, err := os.OpenFile(filepath.Join(*dir, yarnLockFilename), os.O_RDONLY, 0644)
 	if err != nil {
 		return nil, nil
 	}

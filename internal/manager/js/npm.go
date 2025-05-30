@@ -3,7 +3,7 @@ package jsmanager
 import (
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 )
 
 type NpmWorkspace struct {
@@ -12,7 +12,7 @@ type NpmWorkspace struct {
 const npmLockFilename = "package-lock.json"
 
 func ParseNpmWorkspace(dir *string) (*NpmWorkspace, error) {
-	packageLockFile, err := os.Stat(path.Join(*dir, npmLockFilename))
+	packageLockFile, err := os.Stat(filepath.Join(*dir, npmLockFilename))
 	if err != nil || packageLockFile.IsDir() {
 		return nil, nil
 	}

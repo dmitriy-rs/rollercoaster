@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var MODE = "DEV"
+var MODE = "PROD"
 
 var (
 	errStyle = lipgloss.NewStyle().
@@ -67,7 +67,7 @@ func Warning(message string) {
 }
 
 func Debug(message ...any) {
-	if MODE == "DEV" {
+	if MODE == "DEV" || MODE == "TEST" {
 		_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", debugMessageChip, message)
 	}
 }
