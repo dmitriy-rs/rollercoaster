@@ -34,9 +34,10 @@ func (t taskItem) Title() string {
 func (t taskItem) FilterValue() string { return t.Name }
 
 type itemDelegate struct {
-	managerTitles       []manager.Title
-	taskCounts          []int
-	managerStartIndices []int
+	managerTitles        []manager.Title
+	taskCounts           []int
+	managerStartIndices  []int
+	showManagerIndicator bool
 }
 
 func (d itemDelegate) Height() int                             { return 1 }
@@ -58,8 +59,8 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	}
 
 	description := i.Description
-	if len(description) > 40 { // Shorter to make room for manager indicator
-		description = description[:37] + "..."
+	if len(description) > 50 { // Shorter to make room for manager indicator
+		description = description[:47] + "..."
 	}
 
 	titleWidth := 18
@@ -70,9 +71,9 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 
 	paddedTitle := fmt.Sprintf("%-*s", titleWidth, title)
 
-	// Add manager indicator with fixed width for alignment
+	// Add manager indicator with fixed width for alignment - only if needed
 	managerIndicator := ""
-	if managerIndex < len(d.managerTitles) {
+	if d.showManagerIndicator && managerIndex < len(d.managerTitles) {
 		managerName := d.managerTitles[managerIndex].Name
 		if len(managerName) > 8 {
 			managerName = managerName[:8]
@@ -239,10 +240,13 @@ func RenderManagerList(managers []manager.Manager) (*manager.Manager, *task.Task
 		return nil, nil, fmt.Errorf("no tasks found")
 	}
 
+	// Determine if manager indicators should be shown
+	showManagerIndicator := ShouldShowManagerIndicator(managerTitles)
+
 	const defaultWidth = 80
 	const defaultHeight = 14
 
-	l := list.New(allItems, itemDelegate{managerTitles, managerTaskCounts, managerStartIndices}, defaultWidth, defaultHeight)
+	l := list.New(allItems, itemDelegate{managerTitles, managerTaskCounts, managerStartIndices, showManagerIndicator}, defaultWidth, defaultHeight)
 	l.Title = ""
 	l.SetShowStatusBar(false)
 	l.SetShowPagination(true)
