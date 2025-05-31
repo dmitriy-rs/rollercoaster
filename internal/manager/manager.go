@@ -75,6 +75,18 @@ type ManagerTask struct {
 	Manager *Manager
 }
 
+// Implement list.Item interface methods for Bubble Tea
+func (mt ManagerTask) Title() string {
+	if len(mt.Aliases) > 0 {
+		return mt.Aliases[0]
+	}
+	return mt.Name
+}
+
+func (mt ManagerTask) FilterValue() string {
+	return mt.Name
+}
+
 type ManagerTaskSource []ManagerTask
 
 func (mts ManagerTaskSource) String(i int) string {

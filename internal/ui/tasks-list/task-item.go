@@ -40,13 +40,13 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	var taskTitle, taskDescription string
 	var managerTitle manager.Title
 
-	// Handle the new managerTaskItem type
-	if item, ok := listItem.(managerTaskItem); ok {
+	// Handle ManagerTask directly
+	if item, ok := listItem.(manager.ManagerTask); ok {
 		taskTitle = item.Title()
-		taskDescription = item.ManagerTask.Description
-		managerTitle = (*item.ManagerTask.Manager).GetTitle()
+		taskDescription = item.Description
+		managerTitle = (*item.Manager).GetTitle()
 	} else {
-		// Fallback for other item types (not used in new implementation)
+		// Fallback for other item types
 		return
 	}
 

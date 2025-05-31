@@ -46,9 +46,9 @@ func (m managerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			selectedItem := m.list.SelectedItem()
-			if item, ok := selectedItem.(managerTaskItem); ok {
-				m.choice = item.ManagerTask.Task
-				m.chosenManager = item.ManagerTask.Manager
+			if item, ok := selectedItem.(manager.ManagerTask); ok {
+				m.choice = item.Task
+				m.chosenManager = item.Manager
 			}
 			return m, tea.Quit
 
@@ -146,27 +146,13 @@ func RenderTasksList(managerTasks []manager.ManagerTask, initialFilter string) (
 		return nil, nil, fmt.Errorf("no tasks provided")
 	}
 
-	// Convert manager tasks to list items
-	var allItems []list.Item
-	for _, mgr := range managerTasks {
-		allItems = append(allItems, managerTaskItem{ManagerTask: mgr})
+	// Convert ManagerTask slice to list.Item slice (no per-item allocation)
+	allItems := make([]list.Item, len(managerTasks))
+	for i := range managerTasks {
+		allItems[i] = managerTasks[i]
 	}
 
-	// Collect unique manager titles for determining if indicators should be shown
-	var managerTitles []manager.Title
-	seenManagers := make(map[string]bool)
-
-	for _, mgr := range managerTasks {
-		title := (*mgr.Manager).GetTitle()
-		managerKey := title.Name + title.Description
-		if !seenManagers[managerKey] {
-			managerTitles = append(managerTitles, title)
-			seenManagers[managerKey] = true
-		}
-	}
-
-	// Determine if manager indicators should be shown
-	showManagerIndicator := ShouldShowManagerIndicator(managerTitles)
+	showManagerIndicator := ShouldShowManagerIndicator(managerTasks)
 
 	const defaultWidth = 80
 	const defaultHeight = 14
