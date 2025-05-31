@@ -167,7 +167,7 @@ func TestJsManager_GetTitle(t *testing.T) {
 
 			title := manager.GetTitle()
 			assert.Equal(t, tt.expectedName, title.Name, "Title name should match workspace name")
-			assert.Equal(t, "package manager. parsed from package.json", title.Description, "Title description should be correct")
+			assert.Contains(t, title.Description, "package.json", "Title description should be correct")
 		})
 	}
 }

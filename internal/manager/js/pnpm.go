@@ -42,6 +42,11 @@ func ParsePnpmWorkspace(dir *string) (*PnpmWorkspace, error) {
 
 }
 
+func GetDefaultPnpmWorkspace() PnpmWorkspace {
+	// check if pnpm is installed and it's version to parse
+	return PnpmWorkspace{version: 10}
+}
+
 func (m *PnpmWorkspace) Name() string {
 	switch m.version {
 	case 10:

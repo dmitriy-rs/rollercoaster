@@ -5,22 +5,26 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/dmitriy-rs/rollercoaster/internal/config"
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
+	configfile "github.com/dmitriy-rs/rollercoaster/internal/manager/config-file"
 	jsmanager "github.com/dmitriy-rs/rollercoaster/internal/manager/js"
 	taskmanager "github.com/dmitriy-rs/rollercoaster/internal/manager/task-manager"
 )
 
-func ParseManager(dir *string) ([]manager.Manager, error) {
+type ParseManagerConfig struct {
+	DefaultJSManager string
+}
+
+func ParseManager(dir *string, config *ParseManagerConfig) ([]manager.Manager, error) {
 	managers := []manager.Manager{}
 
-	parseConfig := config.ParseConfig{
+	parseConfig := configfile.ParseConfig{
 		CurrentDir: *dir,
 		RootDir:    findClosestGitDir(dir),
 	}
 
-	jsWorkspace, err := jsmanager.ParseJsWorkspace(&parseConfig.RootDir)
+	jsWorkspace, err := jsmanager.ParseJsWorkspace(&parseConfig.RootDir, config.DefaultJSManager)
 	if err != nil {
 		logger.Warning(err.Error())
 	}
@@ -44,14 +48,15 @@ func ParseManager(dir *string) ([]manager.Manager, error) {
 		}
 	}
 
-	if jsWorkspace != nil {
-		managers = append(managers, &jsmanager.JsWorkspaceManager{
-			Workspace: jsWorkspace,
-		})
-	}
-
-	if len(managers) > 0 {
+	if len(managers) > 0 || jsWorkspace != nil {
 		slices.Reverse(managers)
+
+		if jsWorkspace != nil {
+			managers = append(managers, &jsmanager.JsWorkspaceManager{
+				Workspace: jsWorkspace,
+			})
+		}
+
 		return managers, nil
 	}
 

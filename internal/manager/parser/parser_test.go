@@ -102,7 +102,10 @@ func TestParseManager(t *testing.T) {
 			}
 
 			// Parse managers
-			managers, err := parser.ParseManager(&testDir)
+			config := &parser.ParseManagerConfig{
+				DefaultJSManager: "",
+			}
+			managers, err := parser.ParseManager(&testDir, config)
 
 			if tt.expectedManagers == 0 {
 				assert.NoError(t, err, "ParseManager should not return error")
@@ -121,8 +124,8 @@ func TestParseManager(t *testing.T) {
 
 			for _, manager := range managers {
 				title := manager.GetTitle()
-				if strings.Contains(title.Name, "pnpm") || title.Name == "npm" || title.Name == "yarn" {
-					if strings.Contains(title.Description, "package manager commands") {
+				if !strings.Contains(title.Name, "task") {
+					if strings.Contains(title.Description, "commands") {
 						hasWorkspaceManager = true
 					} else {
 						hasJsManager = true
@@ -149,7 +152,10 @@ func TestParseManagerEmptyDirectory(t *testing.T) {
 	require.NoError(t, err, "Failed to create .git directory")
 	defer os.RemoveAll(gitDir) //nolint:errcheck
 
-	managers, err := parser.ParseManager(&testDir)
+	config := &parser.ParseManagerConfig{
+		DefaultJSManager: "",
+	}
+	managers, err := parser.ParseManager(&testDir, config)
 
 	assert.NoError(t, err, "ParseManager should not return error for empty directory")
 	assert.Nil(t, managers, "ParseManager should return nil for empty directory")
@@ -161,7 +167,10 @@ func TestParseManagerNilDirectory(t *testing.T) {
 	// should be fixed to handle nil gracefully.
 	t.Skip("ParseManager does not handle nil directory pointer gracefully - this should be fixed in the implementation")
 
-	managers, err := parser.ParseManager(nil)
+	config := &parser.ParseManagerConfig{
+		DefaultJSManager: "",
+	}
+	managers, err := parser.ParseManager(nil, config)
 
 	assert.NoError(t, err, "ParseManager should not return error for nil directory")
 	assert.Nil(t, managers, "ParseManager should return nil for nil directory")
@@ -169,7 +178,10 @@ func TestParseManagerNilDirectory(t *testing.T) {
 
 func TestParseManagerEmptyString(t *testing.T) {
 	emptyDir := ""
-	managers, err := parser.ParseManager(&emptyDir)
+	config := &parser.ParseManagerConfig{
+		DefaultJSManager: "",
+	}
+	managers, err := parser.ParseManager(&emptyDir, config)
 
 	assert.NoError(t, err, "ParseManager should not return error for empty string directory")
 	assert.Nil(t, managers, "ParseManager should return nil for empty string directory")
@@ -209,7 +221,10 @@ func TestFindClosestGitDir(t *testing.T) {
 
 			// We need to test the findClosestGitDir function indirectly through ParseManager
 			// since it's not exported
-			managers, err := parser.ParseManager(&testDir)
+			config := &parser.ParseManagerConfig{
+				DefaultJSManager: "",
+			}
+			managers, err := parser.ParseManager(&testDir, config)
 
 			// The function should work regardless of git directory presence
 			assert.NoError(t, err, "ParseManager should work with or without .git")
@@ -276,7 +291,10 @@ func TestParseManagerJsWorkspaceAlwaysRegistered(t *testing.T) {
 			require.NoError(t, err, "Failed to create .git directory")
 			defer os.RemoveAll(gitDir) //nolint:errcheck
 
-			managers, err := parser.ParseManager(&testDir)
+			config := &parser.ParseManagerConfig{
+				DefaultJSManager: "",
+			}
+			managers, err := parser.ParseManager(&testDir, config)
 
 			require.NoError(t, err, "ParseManager should not return error")
 			require.NotNil(t, managers, "ParseManager should return managers")
@@ -289,8 +307,8 @@ func TestParseManagerJsWorkspaceAlwaysRegistered(t *testing.T) {
 
 			for _, manager := range managers {
 				title := manager.GetTitle()
-				if strings.Contains(title.Name, "pnpm") || title.Name == "npm" || title.Name == "yarn" {
-					if strings.Contains(title.Description, "package manager commands") {
+				if !strings.Contains(title.Name, "task") {
+					if strings.Contains(title.Description, "commands") {
 						workspaceManagerCount++
 					} else {
 						jsManagerCount++
@@ -311,11 +329,11 @@ func TestParseManagerJsWorkspaceAlwaysRegistered(t *testing.T) {
 
 			// Verify workspace manager is always last when present (due to slices.Reverse)
 			if tt.expectedWorkspaceMgr && len(managers) > 0 {
-				lastManager := managers[0] // After reverse, workspace manager should be first
+				lastManager := managers[len(managers)-1]
 				title := lastManager.GetTitle()
 				assert.True(t,
-					strings.Contains(title.Description, "package manager commands"),
-					"Workspace manager should be first in the list (last added, first after reverse)")
+					strings.Contains(title.Description, "commands"),
+					"Workspace manager should be last in the list")
 			}
 		})
 	}

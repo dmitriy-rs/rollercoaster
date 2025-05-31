@@ -1,8 +1,8 @@
 package jsmanager
 
 import (
-	config "github.com/dmitriy-rs/rollercoaster/internal/config"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
+	config "github.com/dmitriy-rs/rollercoaster/internal/manager/config-file"
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
 )
 
@@ -29,7 +29,7 @@ func ParseJsManager(dir *string, workspace *JsWorkspace) (*JsManager, error) {
 	}
 	manager := &JsManager{
 		config:    config,
-		filename:  packageJsonFilename,
+		filename:  packageJsonFile.Filename,
 		workspace: workspace,
 	}
 
@@ -55,6 +55,6 @@ func (m *JsManager) ExecuteTask(task *task.Task, args ...string) {
 func (m *JsManager) GetTitle() manager.Title {
 	return manager.Title{
 		Name:        (*m.workspace).Name(),
-		Description: "package manager. parsed from " + m.filename,
+		Description: "parsed from " + m.filename,
 	}
 }

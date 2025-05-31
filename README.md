@@ -38,6 +38,7 @@ sudo mv rollercoaster /usr/local/bin/rollercoaster
 
 Type the name of the command to see all available actions in the current scope
 ```sh
+# will show the list with all available tasks
 rollercoaster
 ```
 
@@ -53,9 +54,10 @@ That's so simple as that :)
 
 ### Alias
 
-I suggest to create alias in your shell for the command. Something short and handy, I use `rc`
+I suggest to create alias in your shell for the command. Something short and handy, I use `r` ("run" mnemonic)
 ```zsh
-alias rc="rollercoaster"
+# ~/.zshenv
+alias r="rollercoaster"
 ```
 
 ## TODO
@@ -68,7 +70,7 @@ alias rc="rollercoaster"
 - [ ] If multiple task matches the query show the same selection UI with mached tasks
 - [ ] --accept-first config to always select first match instead of showing the UI
 - [ ] Show which letters where matched in UI
-- [ ] Fuzzy search on mistakes if `ilt` provided `lint` should be selected if available
+- [x] Fuzzy search on mistakes if `ilt` provided `lint` should be selected if available
 - [ ] Add Bun and Deno support
 
 ### Think

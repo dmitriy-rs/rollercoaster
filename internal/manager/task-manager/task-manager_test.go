@@ -340,7 +340,7 @@ func TestTaskManager_GetTitle(t *testing.T) {
 
 			title := tm.GetTitle()
 			assert.Equal(t, "task", title.Name, "Title name should be 'task'")
-			assert.Contains(t, title.Description, "task runner. parsed from", "Title should contain base description")
+			assert.Contains(t, title.Description, "parsed from", "Title should contain base description")
 
 			// Check that all expected files are mentioned in the title
 			for _, expectedFile := range tc.expectedFiles {

@@ -5,8 +5,8 @@ import (
 	"os/exec"
 	"strings"
 
-	config "github.com/dmitriy-rs/rollercoaster/internal/config"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
+	config "github.com/dmitriy-rs/rollercoaster/internal/manager/config-file"
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
 )
 
@@ -118,6 +118,6 @@ func (tm *TaskManager) GetTitle() manager.Title {
 	}
 	return manager.Title{
 		Name:        "task",
-		Description: "task runner. parsed from " + strings.Join(tm.filenames, ", "),
+		Description: "parsed from " + strings.Join(tm.filenames, ", "),
 	}
 }

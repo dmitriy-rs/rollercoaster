@@ -1,10 +1,10 @@
-package config_test
+package configfile_test
 
 import (
 	"path/filepath"
 	"testing"
 
-	config "github.com/dmitriy-rs/rollercoaster/internal/config"
+	config "github.com/dmitriy-rs/rollercoaster/internal/manager/config-file"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

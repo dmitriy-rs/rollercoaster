@@ -19,6 +19,10 @@ func ParseNpmWorkspace(dir *string) (*NpmWorkspace, error) {
 	return &NpmWorkspace{}, nil
 }
 
+func GetDefaultNpmWorkspace() NpmWorkspace {
+	return NpmWorkspace{}
+}
+
 func (m *NpmWorkspace) Name() string {
 	return "npm"
 }

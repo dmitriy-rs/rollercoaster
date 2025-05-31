@@ -1,111 +1,90 @@
 package config
 
 import (
-	"encoding/json"
-	"fmt"
 	"os"
-	"path/filepath"
-	"slices"
-	"strings"
+	"path"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
-
-	"github.com/goccy/go-yaml"
+	"github.com/spf13/viper"
 )
 
-type ParseConfig struct {
-	CurrentDir string
-	RootDir    string
+type Config struct {
+	DefaultJSManager  string
+	AutoSelectClosest bool
 }
 
-func (c *ParseConfig) GetDirectories() []string {
-	currentDir := strings.TrimSuffix(c.CurrentDir, "/")
-	rootDir := strings.TrimSuffix(c.RootDir, "/")
-
-	if rootDir == "" {
-		return []string{currentDir}
-	}
-	if currentDir == "" {
-		// Maybe it's wrong, but we'll try to parse the root dir
-		return []string{rootDir}
-	}
-	if currentDir == rootDir {
-		return []string{rootDir}
-	}
-
-	parsedDirectories := []string{}
-	for dir := currentDir; dir != rootDir; dir = filepath.Dir(dir) {
-		parsedDirectories = append(parsedDirectories, dir)
-	}
-	parsedDirectories = append(parsedDirectories, rootDir)
-	slices.Reverse(parsedDirectories)
-
-	fmt.Println(parsedDirectories)
-
-	return parsedDirectories
-}
-
-type ConfigFile struct {
-	Filename string
-	File     []byte
-}
-
-func ParseFileAsYaml[T any](mf *ConfigFile) (T, error) {
-	var result T
-	err := yaml.Unmarshal(mf.File, &result)
-	if err != nil {
-		message := fmt.Sprintf("Failed to parse YAML config %s file", mf.Filename)
-		logger.Error(message, err)
-		return result, err
-	}
-	return result, nil
-}
-
-func ParseFileAsJson[T any](mf *ConfigFile) (T, error) {
-	var result T
-	err := json.Unmarshal(mf.File, &result)
-	if err != nil {
-		message := fmt.Sprintf("Failed to parse JSON config %s file", mf.Filename)
-		logger.Error(message, err)
-		return result, err
-	}
-	return result, nil
-}
-
-func FindFirstInDirectory(dir *string, filenames []string) *ConfigFile {
-	for _, filename := range filenames {
-		file := FindInDirectory(dir, filename)
-		if file != nil {
-			return file
+func LoadConfig() *Config {
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			err := createConfig()
+			if err != nil {
+				logger.Error("Error creating config", err)
+				return nil
+			}
+		} else {
+			logger.Error("Error loading config", err)
+			return nil
 		}
 	}
+
+	logger.Debug("Config loaded successfully")
+
+	defaultJSManager := validateDefaultJSManager(viper.GetString("DefaultJSManager"))
+	enableDefaultJSManager := viper.GetBool("EnableDefaultJSManager")
+	autoSelectClosest := viper.GetBool("AutoSelectClosest")
+
+	if enableDefaultJSManager {
+		return &Config{
+			DefaultJSManager:  defaultJSManager,
+			AutoSelectClosest: autoSelectClosest,
+		}
+	}
+
+	return &Config{
+		DefaultJSManager:  "",
+		AutoSelectClosest: autoSelectClosest,
+	}
+}
+
+func createConfig() error {
+	configDir := path.Join(os.Getenv("HOME"), ".rollercoaster")
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		err := os.MkdirAll(configDir, 0755)
+		if err != nil {
+			logger.Error("Error creating config directory", err)
+			return err
+		}
+	}
+
+	viper.SetConfigFile(path.Join(os.Getenv("HOME"), ".rollercoaster", "config.toml"))
+	viper.SetConfigType("toml")
+
+	viper.SetDefault("EnableDefaultJSManager", false)
+	viper.SetDefault("DefaultJSManager", "npm")
+	viper.SetDefault("AutoSelectClosest", true)
+
+	err := viper.WriteConfig()
+	if err != nil {
+		return err
+	}
+
+	logger.Debug("Config created successfully")
 	return nil
 }
 
-func FindInDirectory(dir *string, filename string) *ConfigFile {
-	if dir == nil {
-		logger.Error("Directory is nil", nil)
-		return nil
+func validateDefaultJSManager(defaultJSManager string) string {
+	switch defaultJSManager {
+	case "npm":
+		return "npm"
+	case "yarn":
+		return "yarn"
+	case "pnpm":
+		return "pnpm"
+	case "bun":
+		return "bun"
+	case "deno":
+		return "deno"
 	}
-
-	if filename == "" {
-		logger.Error("Filename is empty", nil)
-		return nil
-	}
-
-	fullPath := filepath.Join(*dir, filename)
-	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		return nil
-	}
-
-	file, err := os.ReadFile(fullPath)
-	if err != nil {
-		logger.Error("Failed to read file", err)
-		return nil
-	}
-
-	return &ConfigFile{
-		Filename: fullPath,
-		File:     file,
-	}
+	logger.Warning("Invalid default JS manager: " + defaultJSManager + ". Allowed values are: npm, yarn, pnpm, bun, deno")
+	return ""
 }
