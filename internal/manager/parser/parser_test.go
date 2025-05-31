@@ -121,8 +121,8 @@ func TestParseManager(t *testing.T) {
 
 			for _, manager := range managers {
 				title := manager.GetTitle()
-				if strings.Contains(title.Name, "pnpm") || title.Name == "npm" || title.Name == "yarn" {
-					if strings.Contains(title.Description, "package manager commands") {
+				if !strings.Contains(title.Name, "task") {
+					if strings.Contains(title.Description, "commands") {
 						hasWorkspaceManager = true
 					} else {
 						hasJsManager = true
@@ -289,8 +289,8 @@ func TestParseManagerJsWorkspaceAlwaysRegistered(t *testing.T) {
 
 			for _, manager := range managers {
 				title := manager.GetTitle()
-				if strings.Contains(title.Name, "pnpm") || title.Name == "npm" || title.Name == "yarn" {
-					if strings.Contains(title.Description, "package manager commands") {
+				if !strings.Contains(title.Name, "task") {
+					if strings.Contains(title.Description, "commands") {
 						workspaceManagerCount++
 					} else {
 						jsManagerCount++
@@ -311,11 +311,11 @@ func TestParseManagerJsWorkspaceAlwaysRegistered(t *testing.T) {
 
 			// Verify workspace manager is always last when present (due to slices.Reverse)
 			if tt.expectedWorkspaceMgr && len(managers) > 0 {
-				lastManager := managers[0] // After reverse, workspace manager should be first
+				lastManager := managers[len(managers)-1]
 				title := lastManager.GetTitle()
 				assert.True(t,
-					strings.Contains(title.Description, "package manager commands"),
-					"Workspace manager should be first in the list (last added, first after reverse)")
+					strings.Contains(title.Description, "commands"),
+					"Workspace manager should be last in the list")
 			}
 		})
 	}

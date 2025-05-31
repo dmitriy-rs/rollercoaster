@@ -44,7 +44,7 @@ func ParseManager(dir *string) ([]manager.Manager, error) {
 		}
 	}
 
-	if len(managers) > 0 {
+	if len(managers) > 0 || jsWorkspace != nil {
 		slices.Reverse(managers)
 
 		if jsWorkspace != nil {
