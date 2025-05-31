@@ -118,6 +118,6 @@ func (tm *TaskManager) GetTitle() manager.Title {
 	}
 	return manager.Title{
 		Name:        "task",
-		Description: "task runner, parsed from " + strings.Join(tm.filenames, ", "),
+		Description: "parsed from " + strings.Join(tm.filenames, ", "),
 	}
 }

@@ -24,8 +24,14 @@ var (
 // taskItem wraps task.Task to implement list.Item interface
 type taskItem task.Task
 
-func (t taskItem) Title() string       { return t.Name }
-func (t taskItem) FilterValue() string { return "" }
+func (t taskItem) Title() string {
+	if len(t.Aliases) > 0 {
+		return t.Aliases[0]
+	}
+	return t.Name
+}
+
+func (t taskItem) FilterValue() string { return t.Name }
 
 type itemDelegate struct {
 	managerTitles       []manager.Title
@@ -57,7 +63,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	}
 
 	titleWidth := 18
-	title := i.Name
+	title := i.Title()
 	if len(title) > titleWidth {
 		title = title[:titleWidth-3] + "..."
 	}
@@ -109,13 +115,6 @@ func (m managerModel) getCurrentManagerIndex() int {
 		}
 	}
 	return 0
-}
-
-// navigateToManager moves the cursor to the first task of the specified manager
-func (m *managerModel) navigateToManager(managerIndex int) {
-	if managerIndex >= 0 && managerIndex < len(m.managerStartIndices) {
-		m.list.Select(m.managerStartIndices[managerIndex])
-	}
 }
 
 func (m managerModel) Init() tea.Cmd {
@@ -183,16 +182,23 @@ func (m managerModel) View() string {
 		currentManager := m.managerTitles[currentManagerIndex]
 		titleText := TaskNameStyle.Render(currentManager.Name) + " " + TextColor.Render(currentManager.Description)
 
-		// Make "Manager:" greyish and the title bold
-		managerLabel := lipgloss.NewStyle().MarginLeft(2).Foreground(lipgloss.Color("240")).Render("Manager: ")
-		managerTitle := lipgloss.NewStyle().Bold(true).Render(titleText)
-		header.WriteString(managerLabel + managerTitle)
+		managerTitle := lipgloss.NewStyle().PaddingLeft(5).Bold(true).Render(titleText)
+		header.WriteString(managerTitle)
 	}
 
 	// Use the built-in list view for proper scrolling and pagination
 	listView := m.list.View()
 
-	return header.String() + listView
+	totalItems := len(m.list.Items())
+
+	statusInfo := fmt.Sprintf("tasks %d", totalItems)
+
+	statusBar := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		PaddingLeft(4).
+		Render(statusInfo)
+
+	return header.String() + listView + "\n" + statusBar
 }
 
 func RenderManagerList(managers []manager.Manager) (*manager.Manager, *task.Task, error) {
@@ -238,7 +244,9 @@ func RenderManagerList(managers []manager.Manager) (*manager.Manager, *task.Task
 
 	l := list.New(allItems, itemDelegate{managerTitles, managerTaskCounts, managerStartIndices}, defaultWidth, defaultHeight)
 	l.Title = ""
-	l.SetShowStatusBar(true)
+	l.SetShowStatusBar(false)
+	l.SetShowPagination(true)
+	l.SetShowHelp(true)
 	l.SetFilteringEnabled(false)
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle

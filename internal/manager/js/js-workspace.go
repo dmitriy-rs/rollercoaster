@@ -96,12 +96,12 @@ func (m *JsWorkspaceManager) ListTasks() ([]task.Task, error) {
 		{
 			Name:        WorkspaceInstallTask,
 			Description: "Install dependencies",
-			Aliases:     []string{WorkspaceInstallAliasTask},
 		},
-		// {
-		// 	Name:        WorkspaceExecuteTask,
-		// 	Description: (*m.Workspace).ExecName() + " Execute a command",
-		// },
+		{
+			Name:        WorkspaceExecuteTask,
+			Description: "Execute a command",
+			Aliases:     []string{(*m.Workspace).ExecName()},
+		},
 	}
 	return tasks, nil
 }
@@ -128,6 +128,6 @@ func (m *JsWorkspaceManager) ExecuteTask(task *task.Task, args ...string) {
 func (m *JsWorkspaceManager) GetTitle() manager.Title {
 	return manager.Title{
 		Name:        (*m.Workspace).Name(),
-		Description: "package manager commands",
+		Description: "package commands",
 	}
 }
