@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/dmitriy-rs/rollercoaster/internal/config"
+	config "github.com/dmitriy-rs/rollercoaster/internal/manager/config-file"
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
 	jsmanager "github.com/dmitriy-rs/rollercoaster/internal/manager/js"
