@@ -33,6 +33,10 @@ func ParseYarnWorkspace(dir *string) (*YarnWorkspace, error) {
 	return &YarnWorkspace{version: 1}, nil
 }
 
+func GetDefaultYarnWorkspace() YarnWorkspace {
+	return YarnWorkspace{version: 1}
+}
+
 func (m *YarnWorkspace) Name() string {
 	return "yarn"
 }

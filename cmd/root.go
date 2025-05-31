@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/dmitriy-rs/rollercoaster/internal/config"
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager/parser"
@@ -20,7 +21,8 @@ var rootCmd = &cobra.Command{
 	SilenceErrors: false,
 	Version:       VERSION,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := execute(cmd, args); err != nil {
+		cfg := config.LoadConfig()
+		if err := execute(cmd, args, cfg); err != nil {
 			logger.Error("", err)
 			os.Exit(1)
 		}
@@ -34,13 +36,15 @@ func Execute() {
 	}
 }
 
-func execute(cmd *cobra.Command, args []string) error {
+func execute(cmd *cobra.Command, args []string, cfg *config.Config) error {
 	dir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current working directory: %w", err)
 	}
 
-	managers, err := parser.ParseManager(&dir)
+	managers, err := parser.ParseManager(&dir, &parser.ParseManagerConfig{
+		DefaultJSManager: cfg.DefaultJSManager,
+	})
 	if err != nil {
 		return err
 	}
