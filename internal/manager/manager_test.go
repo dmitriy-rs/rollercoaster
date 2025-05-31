@@ -468,12 +468,11 @@ func TestFindClosestTaskFromList_SingleManager(t *testing.T) {
 	manager1 := NewMockManager("Manager1", tasks)
 	managers := []manager.Manager{manager1}
 
-	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "build")
+	resultTask, err := manager.FindClosestTaskFromList(managers, "build")
 	require.NoError(t, err, "Should not return error when task is found")
-	require.NotNil(t, resultManager, "Should return the manager that contains the task")
 	require.NotNil(t, resultTask, "Should return the found task")
 
-	assert.Equal(t, "Manager1", resultManager.GetTitle().Name, "Should return the correct manager")
+	assert.Equal(t, "Manager1", (*resultTask.Manager).GetTitle().Name, "Should return the correct manager")
 	assert.Equal(t, "build", resultTask.Name, "Should return the correct task")
 	assert.Equal(t, "Build the application", resultTask.Description, "Task description should match")
 }
@@ -492,12 +491,11 @@ func TestFindClosestTaskFromList_TwoManagers_TaskInFirst(t *testing.T) {
 	manager2 := NewMockManager("Manager2", tasks2)
 	managers := []manager.Manager{manager1, manager2}
 
-	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "build")
+	resultTask, err := manager.FindClosestTaskFromList(managers, "build")
 	require.NoError(t, err, "Should not return error when task is found")
-	require.NotNil(t, resultManager, "Should return the manager that contains the task")
 	require.NotNil(t, resultTask, "Should return the found task")
 
-	assert.Equal(t, "Manager1", resultManager.GetTitle().Name, "Should return the first manager with matching task")
+	assert.Equal(t, "Manager1", (*resultTask.Manager).GetTitle().Name, "Should return the first manager with matching task")
 	assert.Equal(t, "build", resultTask.Name, "Should return the correct task")
 }
 
@@ -515,12 +513,11 @@ func TestFindClosestTaskFromList_TwoManagers_TaskInSecond(t *testing.T) {
 	manager2 := NewMockManager("Manager2", tasks2)
 	managers := []manager.Manager{manager1, manager2}
 
-	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "deploy")
+	resultTask, err := manager.FindClosestTaskFromList(managers, "deploy")
 	require.NoError(t, err, "Should not return error when task is found")
-	require.NotNil(t, resultManager, "Should return the manager that contains the task")
 	require.NotNil(t, resultTask, "Should return the found task")
 
-	assert.Equal(t, "Manager2", resultManager.GetTitle().Name, "Should return the second manager with matching task")
+	assert.Equal(t, "Manager2", (*resultTask.Manager).GetTitle().Name, "Should return the second manager with matching task")
 	assert.Equal(t, "deploy", resultTask.Name, "Should return the correct task")
 }
 
@@ -544,12 +541,11 @@ func TestFindClosestTaskFromList_ThreeManagers_FuzzyMatch(t *testing.T) {
 	managers := []manager.Manager{manager1, manager2, manager3}
 
 	// Test fuzzy matching - "dep" should match "deploy-staging" in the third manager
-	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "dep")
+	resultTask, err := manager.FindClosestTaskFromList(managers, "dep")
 	require.NoError(t, err, "Should not return error when fuzzy match is found")
-	require.NotNil(t, resultManager, "Should return the manager that contains the matching task")
 	require.NotNil(t, resultTask, "Should return the found task")
 
-	assert.Equal(t, "Deployment", resultManager.GetTitle().Name, "Should return the third manager with fuzzy matching task")
+	assert.Equal(t, "Deployment", (*resultTask.Manager).GetTitle().Name, "Should return the third manager with fuzzy matching task")
 	assert.True(t, resultTask.Name == "deploy-staging" || resultTask.Name == "deploy-production",
 		"Should return one of the deploy tasks")
 }
@@ -573,9 +569,8 @@ func TestFindClosestTaskFromList_NoTaskFound(t *testing.T) {
 	manager3 := NewMockManager("Manager3", tasks3)
 	managers := []manager.Manager{manager1, manager2, manager3}
 
-	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "nonexistent")
+	resultTask, err := manager.FindClosestTaskFromList(managers, "nonexistent")
 	assert.Error(t, err, "Should return error when no task is found in any manager")
-	assert.Nil(t, resultManager, "Should return nil manager when no task is found")
 	assert.Nil(t, resultTask, "Should return nil task when no task is found")
 
 	expectedError := "no task found for 'nonexistent'"
@@ -585,9 +580,8 @@ func TestFindClosestTaskFromList_NoTaskFound(t *testing.T) {
 func TestFindClosestTaskFromList_EmptyManagersList(t *testing.T) {
 	managers := []manager.Manager{}
 
-	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "anything")
+	resultTask, err := manager.FindClosestTaskFromList(managers, "anything")
 	assert.Error(t, err, "Should return error when managers list is empty")
-	assert.Nil(t, resultManager, "Should return nil manager when managers list is empty")
 	assert.Nil(t, resultTask, "Should return nil task when managers list is empty")
 
 	expectedError := "no task found for 'anything'"
@@ -605,12 +599,11 @@ func TestFindClosestTaskFromList_ManagerWithEmptyTasks(t *testing.T) {
 	manager2 := NewMockManager("Manager2", tasks2)
 	managers := []manager.Manager{manager1, manager2}
 
-	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "deploy")
+	resultTask, err := manager.FindClosestTaskFromList(managers, "deploy")
 	require.NoError(t, err, "Should not return error when task is found in second manager")
-	require.NotNil(t, resultManager, "Should return the manager that contains the task")
 	require.NotNil(t, resultTask, "Should return the found task")
 
-	assert.Equal(t, "Manager2", resultManager.GetTitle().Name, "Should return the second manager with the task")
+	assert.Equal(t, "Manager2", (*resultTask.Manager).GetTitle().Name, "Should return the second manager with the task")
 	assert.Equal(t, "deploy", resultTask.Name, "Should return the correct task")
 }
 
@@ -628,11 +621,10 @@ func TestFindClosestTaskFromList_ManagerWithListError(t *testing.T) {
 	managers := []manager.Manager{manager1, manager2}
 
 	// Even if first manager has an error, should find task in second manager
-	resultManager, resultTask, err := manager.FindClosestTaskFromList(managers, "deploy")
+	resultTask, err := manager.FindClosestTaskFromList(managers, "deploy")
 	require.NoError(t, err, "Should not return error when task is found in working manager")
-	require.NotNil(t, resultManager, "Should return the manager that contains the task")
 	require.NotNil(t, resultTask, "Should return the found task")
 
-	assert.Equal(t, "Manager2", resultManager.GetTitle().Name, "Should return the working manager")
+	assert.Equal(t, "Manager2", (*resultTask.Manager).GetTitle().Name, "Should return the working manager")
 	assert.Equal(t, "deploy", resultTask.Name, "Should return the correct task")
 }

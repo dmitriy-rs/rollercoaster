@@ -61,48 +61,76 @@ func execute(cmd *cobra.Command, args []string, cfg *config.Config) error {
 	if len(args) == 0 {
 		return executeWithoutArgs(managers)
 	} else {
-		return executeWithArgs(managers, args)
+		return executeWithArgs(managers, args, cfg)
 	}
 }
 
 func executeWithoutArgs(managers []manager.Manager) error {
-	allTasks, err := manager.GetManagerTasksFromList(managers)
+	tasks, err := manager.GetManagerTasksFromList(managers)
 	if err != nil {
 		return err
 	}
 
-	selectedManager, selectedTask, err := ui.RenderTasksList(allTasks, "")
+	return handleTasksListUI(tasks, "")
+}
+
+func executeWithArgs(managers []manager.Manager, args []string, cfg *config.Config) error {
+	commandName := args[0]
+	commandArgs := args[1:]
+
+	tasks, err := findTasksWithFallback(managers, commandName, cfg.AutoSelectClosest)
+	if err != nil {
+		return handleNoTasksFound(managers)
+	}
+
+	return handleTaskSelection(tasks, commandName, commandArgs)
+}
+
+func handleTaskSelection(tasks []manager.ManagerTask, commandName string, commandArgs []string) error {
+	if len(tasks) == 1 {
+		return executeSingleTask(&tasks[0], commandArgs...)
+	} else {
+		return handleTasksListUI(tasks, commandName)
+	}
+}
+
+func handleTasksListUI(tasks []manager.ManagerTask, initialSelection string) error {
+	selectedManager, selectedTask, err := ui.RenderTasksList(tasks, initialSelection)
 	if err != nil {
 		return err
 	}
 
 	if selectedManager != nil && selectedTask != nil {
-		(*selectedManager).ExecuteTask(selectedTask)
+		return executeSingleTask(&manager.ManagerTask{
+			Manager: selectedManager,
+			Task:    *selectedTask,
+		})
 	}
 	return nil
 }
 
-func executeWithArgs(managers []manager.Manager, args []string) error {
-	commandName := args[0]
-	commandArgs := args[1:]
-	taskManager, closestTask, err := manager.FindClosestTaskFromList(managers, commandName)
-	if err != nil {
-		logger.Info("No tasks found")
-		allTasks, err := manager.GetManagerTasksFromList(managers)
+func findTasksWithFallback(managers []manager.Manager, commandName string, autoSelectClosest bool) ([]manager.ManagerTask, error) {
+	if autoSelectClosest {
+		closestTask, err := manager.FindClosestTaskFromList(managers, commandName)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		selectedManager, selectedTask, err := ui.RenderTasksList(allTasks, "")
+		return []manager.ManagerTask{*closestTask}, nil
+	} else {
+		tasks, err := manager.FindAllClosestTasksFromList(managers, commandName)
 		if err != nil {
-			return err
+			return nil, err
 		}
-
-		// If user selected a task, execute it
-		if selectedManager != nil && selectedTask != nil {
-			(*selectedManager).ExecuteTask(selectedTask)
-		}
-		return nil
+		return tasks, nil
 	}
-	taskManager.ExecuteTask(closestTask, commandArgs...)
+}
+
+func handleNoTasksFound(managers []manager.Manager) error {
+	logger.Info("No tasks found")
+	return executeWithoutArgs(managers)
+}
+
+func executeSingleTask(managerTask *manager.ManagerTask, args ...string) error {
+	(*managerTask.Manager).ExecuteTask(&managerTask.Task, args...)
 	return nil
 }

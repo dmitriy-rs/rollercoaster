@@ -20,17 +20,17 @@ type Title struct {
 	Description string
 }
 
-func FindClosestTaskFromList(managers []Manager, arg string) (Manager, *task.Task, error) {
+func FindClosestTaskFromList(managers []Manager, arg string) (*ManagerTask, error) {
 	for _, manager := range managers {
 		task, _ := FindClosestTask(manager, arg)
 		if task != nil {
-			return manager, task, nil
+			return task, nil
 		}
 	}
-	return nil, nil, fmt.Errorf("no task found for '%s'", arg)
+	return nil, fmt.Errorf("no task found for '%s'", arg)
 }
 
-func FindClosestTask(manager Manager, arg string) (*task.Task, error) {
+func FindClosestTask(manager Manager, arg string) (*ManagerTask, error) {
 	tasks, err := manager.ListTasks()
 	if err != nil {
 		logger.Error("Failed to list tasks", err)
@@ -39,31 +39,50 @@ func FindClosestTask(manager Manager, arg string) (*task.Task, error) {
 
 	logger.Debug(fmt.Sprintf("Found tasks: %s", tasks))
 
-	taskNames := make([]string, len(tasks))
-	for i, t := range tasks {
-		taskNames[i] = t.Name
-	}
-
-	matches := fuzzy.Find(arg, taskNames)
+	matches := fuzzy.FindFrom(arg, task.TaskSource(tasks))
 
 	logger.Debug(fmt.Sprintf("Fuzzy matches for '%s': %v", arg, matches))
 
 	if len(matches) != 0 {
-		var matchedTask *task.Task
-		for _, task := range tasks {
-			if task.Name == matches[0].Str {
-				matchedTask = &task
-				break
-			}
-		}
-		return matchedTask, nil
+		return &ManagerTask{
+			Task:    tasks[matches[0].Index],
+			Manager: &manager,
+		}, nil
 	}
 	return nil, fmt.Errorf("no task found for '%s'", arg)
+}
+
+func FindAllClosestTasksFromList(managers []Manager, arg string) ([]ManagerTask, error) {
+	tasks, err := GetManagerTasksFromList(managers)
+	if err != nil {
+		return nil, err
+	}
+
+	matches := fuzzy.FindFrom(arg, ManagerTaskSource(tasks))
+
+	logger.Debug(fmt.Sprintf("Fuzzy matches for '%s': %v", arg, matches))
+
+	result := make([]ManagerTask, len(matches))
+	for i, match := range matches {
+		result[i] = tasks[match.Index]
+	}
+
+	return result, nil
 }
 
 type ManagerTask struct {
 	task.Task
 	Manager *Manager
+}
+
+type ManagerTaskSource []ManagerTask
+
+func (mts ManagerTaskSource) String(i int) string {
+	return mts[i].Name
+}
+
+func (mts ManagerTaskSource) Len() int {
+	return len(mts)
 }
 
 func GetManagerTasksFromList(managers []Manager) ([]ManagerTask, error) {
@@ -94,14 +113,4 @@ func getManagerTasks(manager Manager) ([]ManagerTask, error) {
 		}
 	}
 	return taskWithManager, nil
-}
-
-func FindAllClosestTasksFromList(managers []Manager, arg string) (Manager, *task.Task, error) {
-	for _, manager := range managers {
-		task, _ := FindClosestTask(manager, arg)
-		if task != nil {
-			return manager, task, nil
-		}
-	}
-	return nil, nil, fmt.Errorf("no task found for '%s'", arg)
 }

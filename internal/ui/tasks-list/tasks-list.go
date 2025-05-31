@@ -79,7 +79,7 @@ func (m managerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "esc":
 			// If initial filter was provided, always quit on ESC
-			if m.hasInitialFilter {
+			if m.hasInitialFilter && m.list.FilterState() == list.FilterApplied {
 				m.quitting = true
 				return m, tea.Quit
 			}

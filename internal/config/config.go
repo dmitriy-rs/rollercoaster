@@ -47,6 +47,15 @@ func LoadConfig() *Config {
 }
 
 func createConfig() error {
+	configDir := path.Join(os.Getenv("HOME"), ".rollercoaster")
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		err := os.MkdirAll(configDir, 0755)
+		if err != nil {
+			logger.Error("Error creating config directory", err)
+			return err
+		}
+	}
+
 	viper.SetConfigFile(path.Join(os.Getenv("HOME"), ".rollercoaster", "config.toml"))
 	viper.SetConfigType("toml")
 
