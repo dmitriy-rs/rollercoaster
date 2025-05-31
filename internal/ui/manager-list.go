@@ -25,6 +25,7 @@ type managerModel struct {
 	managerTitles       []manager.Title
 	taskCounts          []int
 	managerStartIndices []int // Track where each manager's tasks start
+	hasInitialFilter    bool  // Track if initial filter was provided
 }
 
 // getCurrentManagerIndex returns the index of the manager that contains the currently selected task
@@ -90,6 +91,12 @@ func (m managerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 
 		case "esc":
+			// If initial filter was provided, always quit on ESC
+			if m.hasInitialFilter {
+				m.quitting = true
+				return m, tea.Quit
+			}
+
 			// Let the list handle ESC first (to exit filtering if active)
 			wasFiltering := m.list.FilterState() == list.Filtering || m.list.FilterState() == list.FilterApplied
 			var cmd tea.Cmd
@@ -146,7 +153,7 @@ func (m managerModel) View() string {
 	return header.String() + listView + "\n" + statusBar
 }
 
-func RenderManagerList(managers []manager.Manager) (*manager.Manager, *task.Task, error) {
+func RenderManagerList(managers []manager.Manager, initialFilter string) (*manager.Manager, *task.Task, error) {
 	if len(managers) == 0 {
 		return nil, nil, fmt.Errorf("no managers provided")
 	}
@@ -205,11 +212,20 @@ func RenderManagerList(managers []manager.Manager) (*manager.Manager, *task.Task
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
 
+	hasInitialFilter := initialFilter != ""
+
+	// If initial filter is provided, set it up before creating the model
+	if hasInitialFilter {
+		l.SetFilterText(initialFilter)
+		l.SetFilterState(list.FilterApplied)
+	}
+
 	m := managerModel{
 		list:                l,
 		managerTitles:       managerTitles,
 		taskCounts:          managerTaskCounts,
 		managerStartIndices: managerStartIndices,
+		hasInitialFilter:    hasInitialFilter,
 	}
 
 	finalModel, err := tea.NewProgram(m).Run()

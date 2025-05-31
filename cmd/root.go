@@ -49,7 +49,7 @@ func execute(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(args) == 0 {
-		selectedManager, selectedTask, err := ui.RenderManagerList(managers)
+		selectedManager, selectedTask, err := ui.RenderManagerList(managers, "")
 		if err != nil {
 			return err
 		}
@@ -66,7 +66,7 @@ func execute(cmd *cobra.Command, args []string) error {
 		taskManager, closestTask, err := manager.FindClosestTaskFromList(managers, commandName)
 		if err != nil {
 			logger.Info("No tasks found")
-			selectedManager, selectedTask, err := ui.RenderManagerList(managers)
+			selectedManager, selectedTask, err := ui.RenderManagerList(managers, "")
 			if err != nil {
 				return err
 			}

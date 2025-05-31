@@ -83,6 +83,7 @@ func TestManagerModel_CoreFunctionality(t *testing.T) {
 		managerTitles:       managerTitles,
 		taskCounts:          taskCounts,
 		managerStartIndices: managerStartIndices,
+		hasInitialFilter:    false,
 	}
 
 	t.Run("getCurrentManagerIndex", func(t *testing.T) {
@@ -161,6 +162,7 @@ func TestManagerModel_AdditionalFeatures(t *testing.T) {
 		managerTitles:       managerTitles,
 		taskCounts:          taskCounts,
 		managerStartIndices: managerStartIndices,
+		hasInitialFilter:    false,
 	}
 
 	t.Run("Init", func(t *testing.T) {
@@ -266,6 +268,7 @@ func TestManagerModel_AdditionalFeatures(t *testing.T) {
 			managerTitles:       managerTitles,
 			taskCounts:          taskCounts,
 			managerStartIndices: managerStartIndices,
+			hasInitialFilter:    false,
 		}
 
 		enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
@@ -289,7 +292,7 @@ func TestManagerModel_AdditionalFeatures(t *testing.T) {
 
 func TestRenderManagerList_ErrorCases(t *testing.T) {
 	t.Run("no managers provided", func(t *testing.T) {
-		resultManager, resultTask, err := RenderManagerList([]manager.Manager{})
+		resultManager, resultTask, err := RenderManagerList([]manager.Manager{}, "")
 
 		assert.Error(t, err)
 		assert.Nil(t, resultManager)
@@ -300,7 +303,7 @@ func TestRenderManagerList_ErrorCases(t *testing.T) {
 	t.Run("manager with list error", func(t *testing.T) {
 		errorManager := mocks.CreateErrorManager()
 
-		resultManager, resultTask, err := RenderManagerList([]manager.Manager{errorManager})
+		resultManager, resultTask, err := RenderManagerList([]manager.Manager{errorManager}, "")
 
 		assert.Error(t, err)
 		assert.Nil(t, resultManager)
@@ -312,7 +315,7 @@ func TestRenderManagerList_ErrorCases(t *testing.T) {
 		emptyManager1 := mocks.NewTaskManagerMock("empty1", "Empty manager 1", []task.Task{})
 		emptyManager2 := mocks.NewTaskManagerMock("empty2", "Empty manager 2", []task.Task{})
 
-		resultManager, resultTask, err := RenderManagerList([]manager.Manager{emptyManager1, emptyManager2})
+		resultManager, resultTask, err := RenderManagerList([]manager.Manager{emptyManager1, emptyManager2}, "")
 
 		assert.Error(t, err)
 		assert.Nil(t, resultManager)
@@ -347,5 +350,73 @@ func TestFilteringBasics(t *testing.T) {
 
 		// Should show tasks containing "test" (test and test-unit)
 		assert.Equal(t, 2, len(filteredItems))
+	})
+}
+
+func TestInitialFilter(t *testing.T) {
+	tasks := []task.Task{
+		{Name: "build", Description: "Build the application"},
+		{Name: "test", Description: "Run all tests"},
+		{Name: "test-unit", Description: "Run unit tests"},
+		{Name: "deploy", Description: "Deploy to production"},
+	}
+
+	t.Run("ESC always quits when initial filter provided", func(t *testing.T) {
+		var allItems []list.Item
+		for _, task := range tasks {
+			allItems = append(allItems, taskItem(task))
+		}
+
+		listModel := list.New(allItems, itemDelegate{}, 80, 14)
+		listModel.SetFilteringEnabled(true)
+		listModel.SetFilterText("test")
+		listModel.SetFilterState(list.FilterApplied)
+
+		model := managerModel{
+			list:                listModel,
+			managerTitles:       []manager.Title{{Name: "Test", Description: "Test manager"}},
+			taskCounts:          []int{len(tasks)},
+			managerStartIndices: []int{0},
+			hasInitialFilter:    true, // This is the key - initial filter was provided
+		}
+
+		escMsg := tea.KeyMsg{Type: tea.KeyEsc}
+		updatedModel, cmd := model.Update(escMsg)
+
+		// Should always quit when initial filter was provided
+		assert.NotNil(t, cmd)
+		modelTyped := updatedModel.(managerModel)
+		assert.True(t, modelTyped.quitting)
+	})
+
+	t.Run("ESC behaves normally when no initial filter", func(t *testing.T) {
+		var allItems []list.Item
+		for _, task := range tasks {
+			allItems = append(allItems, taskItem(task))
+		}
+
+		listModel := list.New(allItems, itemDelegate{}, 80, 14)
+		listModel.SetFilteringEnabled(true)
+		listModel.SetFilterText("test")
+		listModel.SetFilterState(list.FilterApplied)
+
+		model := managerModel{
+			list:                listModel,
+			managerTitles:       []manager.Title{{Name: "Test", Description: "Test manager"}},
+			taskCounts:          []int{len(tasks)},
+			managerStartIndices: []int{0},
+			hasInitialFilter:    false, // No initial filter was provided
+		}
+
+		escMsg := tea.KeyMsg{Type: tea.KeyEsc}
+		updatedModel, cmd := model.Update(escMsg)
+
+		// Should handle ESC for filtering, not quit immediately
+		assert.IsType(t, managerModel{}, updatedModel)
+		modelTyped := updatedModel.(managerModel)
+		// Should not quit immediately when filtering is active and no initial filter
+		assert.False(t, modelTyped.quitting)
+		// cmd may or may not be nil depending on how the list handles it
+		_ = cmd
 	})
 }
