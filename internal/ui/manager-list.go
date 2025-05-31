@@ -56,9 +56,11 @@ func (m managerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "enter":
-			i, ok := m.list.SelectedItem().(taskItem)
-			if ok {
-				m.choice = task.Task(i)
+			selectedItem := m.list.SelectedItem()
+			if itemWithManager, ok := selectedItem.(taskItemWithManager); ok {
+				m.choice = itemWithManager.Task
+			} else if item, ok := selectedItem.(taskItem); ok {
+				m.choice = task.Task(item)
 			}
 			return m, tea.Quit
 
@@ -79,6 +81,28 @@ func (m managerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.list.Select(len(visibleItems) - 1)
 			}
 			return m, nil
+
+		case "/":
+			// Start filtering mode
+			m.list.SetFilteringEnabled(true)
+			var cmd tea.Cmd
+			m.list, cmd = m.list.Update(msg)
+			return m, cmd
+
+		case "esc":
+			// Let the list handle ESC first (to exit filtering if active)
+			wasFiltering := m.list.FilterState() == list.Filtering || m.list.FilterState() == list.FilterApplied
+			var cmd tea.Cmd
+			m.list, cmd = m.list.Update(msg)
+
+			// If we were filtering and the list handled it, don't quit
+			if wasFiltering {
+				return m, cmd
+			}
+
+			// Otherwise, quit the application
+			m.quitting = true
+			return m, tea.Quit
 		}
 	}
 
@@ -135,7 +159,7 @@ func RenderManagerList(managers []manager.Manager) (*manager.Manager, *task.Task
 	var taskToManagerMap = make(map[string]manager.Manager) // Map task name to its manager
 
 	taskIndex := 0
-	for _, mgr := range managers {
+	for managerIdx, mgr := range managers {
 		tasks, err := mgr.ListTasks()
 		if err != nil {
 			return nil, nil, err
@@ -150,7 +174,12 @@ func RenderManagerList(managers []manager.Manager) (*manager.Manager, *task.Task
 		managerStartIndices = append(managerStartIndices, taskIndex)
 
 		for _, t := range tasks {
-			allItems = append(allItems, taskItem(t))
+			// Use taskItemWithManager to store the manager index directly
+			itemWithManager := taskItemWithManager{
+				Task:         t,
+				ManagerIndex: managerIdx,
+			}
+			allItems = append(allItems, itemWithManager)
 			taskToManagerMap[t.Name] = mgr // Store the mapping
 			taskIndex++
 		}
@@ -171,7 +200,7 @@ func RenderManagerList(managers []manager.Manager) (*manager.Manager, *task.Task
 	l.SetShowStatusBar(false)
 	l.SetShowPagination(true)
 	l.SetShowHelp(true)
-	l.SetFilteringEnabled(false)
+	l.SetFilteringEnabled(true)
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle

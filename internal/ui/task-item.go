@@ -19,6 +19,12 @@ var (
 // taskItem wraps task.Task to implement list.Item interface
 type taskItem task.Task
 
+// taskItemWithManager extends taskItem to include manager information
+type taskItemWithManager struct {
+	task.Task
+	ManagerIndex int
+}
+
 func (t taskItem) Title() string {
 	if len(t.Aliases) > 0 {
 		return t.Aliases[0]
@@ -27,6 +33,15 @@ func (t taskItem) Title() string {
 }
 
 func (t taskItem) FilterValue() string { return t.Name }
+
+func (t taskItemWithManager) Title() string {
+	if len(t.Aliases) > 0 {
+		return t.Aliases[0]
+	}
+	return t.Name
+}
+
+func (t taskItemWithManager) FilterValue() string { return t.Name }
 
 type itemDelegate struct {
 	managerTitles        []manager.Title
@@ -39,27 +54,76 @@ func (d itemDelegate) Height() int                             { return 1 }
 func (d itemDelegate) Spacing() int                            { return 0 }
 func (d itemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	i, ok := listItem.(taskItem)
-	if !ok {
+	// Try to get taskItemWithManager first, then fall back to taskItem
+	var taskName, taskTitle, taskDescription string
+	var managerIndex int
+	var hasManagerIndex bool
+
+	if itemWithManager, ok := listItem.(taskItemWithManager); ok {
+		taskName = itemWithManager.Name
+		taskTitle = itemWithManager.Title()
+		taskDescription = itemWithManager.Description
+		managerIndex = itemWithManager.ManagerIndex
+		hasManagerIndex = true
+	} else if item, ok := listItem.(taskItem); ok {
+		taskName = item.Name
+		taskTitle = item.Title()
+		taskDescription = item.Description
+		hasManagerIndex = false
+	} else {
 		return
 	}
 
 	// Find which manager this task belongs to
-	managerIndex := 0
-	for j := len(d.managerStartIndices) - 1; j >= 0; j-- {
-		if index >= d.managerStartIndices[j] {
-			managerIndex = j
-			break
+	if !hasManagerIndex {
+		// Fall back to the old logic for backward compatibility
+		if m.IsFiltered() || m.SettingFilter() {
+			// When filtering is active or user is typing in filter, find the task in the original items list
+			allItems := m.Items()
+			originalIndex := -1
+
+			// Find the original index by comparing task names
+			for idx, item := range allItems {
+				if taskItem, ok := item.(taskItem); ok {
+					if taskItem.Name == taskName {
+						originalIndex = idx
+						break
+					}
+				} else if taskItemWithManager, ok := item.(taskItemWithManager); ok {
+					if taskItemWithManager.Name == taskName {
+						originalIndex = idx
+						break
+					}
+				}
+			}
+
+			// Use the original index to determine manager
+			if originalIndex >= 0 {
+				for j := len(d.managerStartIndices) - 1; j >= 0; j-- {
+					if originalIndex >= d.managerStartIndices[j] {
+						managerIndex = j
+						break
+					}
+				}
+			}
+		} else {
+			// When not filtering, use the current index as before
+			for j := len(d.managerStartIndices) - 1; j >= 0; j-- {
+				if index >= d.managerStartIndices[j] {
+					managerIndex = j
+					break
+				}
+			}
 		}
 	}
 
-	description := i.Description
+	description := taskDescription
 	if len(description) > 50 { // Shorter to make room for manager indicator
 		description = description[:47] + "..."
 	}
 
 	titleWidth := 18
-	title := i.Title()
+	title := taskTitle
 	if len(title) > titleWidth {
 		title = title[:titleWidth-3] + "..."
 	}
