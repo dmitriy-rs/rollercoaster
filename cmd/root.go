@@ -8,7 +8,7 @@ import (
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager/parser"
-	"github.com/dmitriy-rs/rollercoaster/internal/ui/tasks-list"
+	ui "github.com/dmitriy-rs/rollercoaster/internal/ui/tasks-list"
 	"github.com/spf13/cobra"
 )
 
@@ -42,8 +42,14 @@ func execute(cmd *cobra.Command, args []string, cfg *config.Config) error {
 		return fmt.Errorf("failed to get current working directory: %w", err)
 	}
 
+	// Handle case where config failed to load
+	var defaultJSManager string
+	if cfg != nil {
+		defaultJSManager = cfg.DefaultJSManager
+	}
+
 	managers, err := parser.ParseManager(&dir, &parser.ParseManagerConfig{
-		DefaultJSManager: cfg.DefaultJSManager,
+		DefaultJSManager: defaultJSManager,
 	})
 	if err != nil {
 		return err
@@ -53,7 +59,40 @@ func execute(cmd *cobra.Command, args []string, cfg *config.Config) error {
 	}
 
 	if len(args) == 0 {
-		selectedManager, selectedTask, err := ui.RenderTasksList(managers, "")
+		return executeWithoutArgs(managers)
+	} else {
+		return executeWithArgs(managers, args)
+	}
+}
+
+func executeWithoutArgs(managers []manager.Manager) error {
+	allTasks, err := manager.GetManagerTasksFromList(managers)
+	if err != nil {
+		return err
+	}
+
+	selectedManager, selectedTask, err := ui.RenderTasksList(allTasks, "")
+	if err != nil {
+		return err
+	}
+
+	if selectedManager != nil && selectedTask != nil {
+		(*selectedManager).ExecuteTask(selectedTask)
+	}
+	return nil
+}
+
+func executeWithArgs(managers []manager.Manager, args []string) error {
+	commandName := args[0]
+	commandArgs := args[1:]
+	taskManager, closestTask, err := manager.FindClosestTaskFromList(managers, commandName)
+	if err != nil {
+		logger.Info("No tasks found")
+		allTasks, err := manager.GetManagerTasksFromList(managers)
+		if err != nil {
+			return err
+		}
+		selectedManager, selectedTask, err := ui.RenderTasksList(allTasks, "")
 		if err != nil {
 			return err
 		}
@@ -62,26 +101,8 @@ func execute(cmd *cobra.Command, args []string, cfg *config.Config) error {
 		if selectedManager != nil && selectedTask != nil {
 			(*selectedManager).ExecuteTask(selectedTask)
 		}
-		// If user quit without selecting, just return (no error)
-		return nil
-	} else {
-		commandName := args[0]
-		commandArgs := args[1:]
-		taskManager, closestTask, err := manager.FindClosestTaskFromList(managers, commandName)
-		if err != nil {
-			logger.Info("No tasks found")
-			selectedManager, selectedTask, err := ui.RenderTasksList(managers, "")
-			if err != nil {
-				return err
-			}
-
-			// If user selected a task, execute it
-			if selectedManager != nil && selectedTask != nil {
-				(*selectedManager).ExecuteTask(selectedTask)
-			}
-			return nil
-		}
-		taskManager.ExecuteTask(closestTask, commandArgs...)
 		return nil
 	}
+	taskManager.ExecuteTask(closestTask, commandArgs...)
+	return nil
 }

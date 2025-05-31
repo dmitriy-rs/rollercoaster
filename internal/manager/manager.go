@@ -60,3 +60,48 @@ func FindClosestTask(manager Manager, arg string) (*task.Task, error) {
 	}
 	return nil, fmt.Errorf("no task found for '%s'", arg)
 }
+
+type ManagerTask struct {
+	task.Task
+	Manager *Manager
+}
+
+func GetManagerTasksFromList(managers []Manager) ([]ManagerTask, error) {
+	allTasks := []ManagerTask{}
+	for _, manager := range managers {
+		tasks, err := getManagerTasks(manager)
+		if err != nil {
+			logger.Warning("Failed to get tasks for manager: " + manager.GetTitle().Name)
+			continue
+		}
+		allTasks = append(allTasks, tasks...)
+	}
+	return allTasks, nil
+}
+
+func getManagerTasks(manager Manager) ([]ManagerTask, error) {
+	tasks, err := manager.ListTasks()
+	if err != nil {
+		return nil, err
+	}
+	task.SortTasks(tasks)
+
+	taskWithManager := make([]ManagerTask, len(tasks))
+	for i, t := range tasks {
+		taskWithManager[i] = ManagerTask{
+			Task:    t,
+			Manager: &manager,
+		}
+	}
+	return taskWithManager, nil
+}
+
+func FindAllClosestTasksFromList(managers []Manager, arg string) (Manager, *task.Task, error) {
+	for _, manager := range managers {
+		task, _ := FindClosestTask(manager, arg)
+		if task != nil {
+			return manager, task, nil
+		}
+	}
+	return nil, nil, fmt.Errorf("no task found for '%s'", arg)
+}

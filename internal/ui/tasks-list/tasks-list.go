@@ -19,24 +19,12 @@ var (
 )
 
 type managerModel struct {
-	list                list.Model
-	choice              task.Task
-	quitting            bool
-	managerTitles       []manager.Title
-	taskCounts          []int
-	managerStartIndices []int // Track where each manager's tasks start
-	hasInitialFilter    bool  // Track if initial filter was provided
-}
-
-// getCurrentManagerIndex returns the index of the manager that contains the currently selected task
-func (m managerModel) getCurrentManagerIndex() int {
-	currentIndex := m.list.Index()
-	for i := len(m.managerStartIndices) - 1; i >= 0; i-- {
-		if currentIndex >= m.managerStartIndices[i] {
-			return i
-		}
-	}
-	return 0
+	list             list.Model
+	choice           task.Task
+	chosenManager    *manager.Manager
+	quitting         bool
+	managerTasks     []manager.ManagerTask
+	hasInitialFilter bool // Track if initial filter was provided
 }
 
 func (m managerModel) Init() tea.Cmd {
@@ -58,10 +46,9 @@ func (m managerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			selectedItem := m.list.SelectedItem()
-			if itemWithManager, ok := selectedItem.(taskItemWithManager); ok {
-				m.choice = itemWithManager.Task
-			} else if item, ok := selectedItem.(taskItem); ok {
-				m.choice = task.Task(item)
+			if item, ok := selectedItem.(managerTaskItem); ok {
+				m.choice = item.ManagerTask.Task
+				m.chosenManager = item.ManagerTask.Manager
 			}
 			return m, tea.Quit
 
@@ -127,13 +114,15 @@ func (m managerModel) View() string {
 	}
 
 	// Show current manager context at the top
-	currentManagerIndex := m.getCurrentManagerIndex()
 	var header strings.Builder
 
-	if currentManagerIndex < len(m.managerTitles) {
-		currentManager := m.managerTitles[currentManagerIndex]
-		titleText := TaskNameStyle.Render(currentManager.Name) + " " + TextColor.Render(currentManager.Description)
+	// Get the current task to show its manager
+	if m.list.Index() < len(m.managerTasks) {
+		currentTask := m.managerTasks[m.list.Index()]
+		currentManager := *currentTask.Manager
+		currentTitle := currentManager.GetTitle()
 
+		titleText := TaskNameStyle.Render(currentTitle.Name) + " " + TextColor.Render(currentTitle.Description)
 		managerTitle := lipgloss.NewStyle().PaddingLeft(5).Bold(true).Render(titleText)
 		header.WriteString(managerTitle)
 	}
@@ -142,7 +131,6 @@ func (m managerModel) View() string {
 	listView := m.list.View()
 
 	totalItems := len(m.list.Items())
-
 	statusInfo := fmt.Sprintf("tasks %d", totalItems)
 
 	statusBar := lipgloss.NewStyle().
@@ -153,47 +141,28 @@ func (m managerModel) View() string {
 	return header.String() + listView + "\n" + statusBar
 }
 
-func RenderTasksList(managers []manager.Manager, initialFilter string) (*manager.Manager, *task.Task, error) {
-	if len(managers) == 0 {
-		return nil, nil, fmt.Errorf("no managers provided")
+func RenderTasksList(managerTasks []manager.ManagerTask, initialFilter string) (*manager.Manager, *task.Task, error) {
+	if len(managerTasks) == 0 {
+		return nil, nil, fmt.Errorf("no tasks provided")
 	}
 
-	// Collect all tasks from all managers with manager info
+	// Convert manager tasks to list items
 	var allItems []list.Item
-	var managerTitles []manager.Title
-	var managerTaskCounts []int
-	var managerStartIndices []int
-	var taskToManagerMap = make(map[string]manager.Manager) // Map task name to its manager
-
-	taskIndex := 0
-	for managerIdx, mgr := range managers {
-		tasks, err := mgr.ListTasks()
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if len(tasks) == 0 {
-			continue // Skip managers with no tasks
-		}
-
-		managerTitles = append(managerTitles, mgr.GetTitle())
-		managerTaskCounts = append(managerTaskCounts, len(tasks))
-		managerStartIndices = append(managerStartIndices, taskIndex)
-
-		for _, t := range tasks {
-			// Use taskItemWithManager to store the manager index directly
-			itemWithManager := taskItemWithManager{
-				Task:         t,
-				ManagerIndex: managerIdx,
-			}
-			allItems = append(allItems, itemWithManager)
-			taskToManagerMap[t.Name] = mgr // Store the mapping
-			taskIndex++
-		}
+	for _, mgr := range managerTasks {
+		allItems = append(allItems, managerTaskItem{ManagerTask: mgr})
 	}
 
-	if len(allItems) == 0 {
-		return nil, nil, fmt.Errorf("no tasks found")
+	// Collect unique manager titles for determining if indicators should be shown
+	var managerTitles []manager.Title
+	seenManagers := make(map[string]bool)
+
+	for _, mgr := range managerTasks {
+		title := (*mgr.Manager).GetTitle()
+		managerKey := title.Name + title.Description
+		if !seenManagers[managerKey] {
+			managerTitles = append(managerTitles, title)
+			seenManagers[managerKey] = true
+		}
 	}
 
 	// Determine if manager indicators should be shown
@@ -202,7 +171,7 @@ func RenderTasksList(managers []manager.Manager, initialFilter string) (*manager
 	const defaultWidth = 80
 	const defaultHeight = 14
 
-	l := list.New(allItems, itemDelegate{managerTitles, managerTaskCounts, managerStartIndices, showManagerIndicator}, defaultWidth, defaultHeight)
+	l := list.New(allItems, itemDelegate{showManagerIndicator: showManagerIndicator}, defaultWidth, defaultHeight)
 	l.Title = ""
 	l.SetShowStatusBar(false)
 	l.SetShowPagination(true)
@@ -221,11 +190,9 @@ func RenderTasksList(managers []manager.Manager, initialFilter string) (*manager
 	}
 
 	m := managerModel{
-		list:                l,
-		managerTitles:       managerTitles,
-		taskCounts:          managerTaskCounts,
-		managerStartIndices: managerStartIndices,
-		hasInitialFilter:    hasInitialFilter,
+		list:             l,
+		managerTasks:     managerTasks,
+		hasInitialFilter: hasInitialFilter,
 	}
 
 	finalModel, err := tea.NewProgram(m).Run()
@@ -235,11 +202,8 @@ func RenderTasksList(managers []manager.Manager, initialFilter string) (*manager
 
 	// Extract the selected task from the final model
 	if model, ok := finalModel.(managerModel); ok {
-		if model.choice.Name != "" {
-			// Find the manager for this task
-			if mgr, exists := taskToManagerMap[model.choice.Name]; exists {
-				return &mgr, &model.choice, nil
-			}
+		if model.choice.Name != "" && model.chosenManager != nil {
+			return model.chosenManager, &model.choice, nil
 		}
 	}
 

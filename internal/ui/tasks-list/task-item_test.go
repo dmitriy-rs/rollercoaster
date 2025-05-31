@@ -10,13 +10,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Mock item for testing that implements list.Item but is not a taskItem
+// Mock item for testing that implements list.Item but is not a managerTaskItem
 type mockListItem struct{}
 
 func (m mockListItem) Title() string       { return "mock" }
 func (m mockListItem) FilterValue() string { return "mock" }
 
-func TestTaskItem(t *testing.T) {
+// Mock manager for testing
+type mockManager struct {
+	title manager.Title
+}
+
+func (m *mockManager) GetTitle() manager.Title                     { return m.title }
+func (m *mockManager) ListTasks() ([]task.Task, error)             { return nil, nil }
+func (m *mockManager) ExecuteTask(task *task.Task, args ...string) {}
+
+func TestManagerTaskItem(t *testing.T) {
 	tests := []struct {
 		name         string
 		task         task.Task
@@ -52,9 +61,15 @@ func TestTaskItem(t *testing.T) {
 		},
 	}
 
+	var mgr manager.Manager = &mockManager{title: manager.Title{Name: "test", Description: "Test manager"}}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			item := taskItem(tt.task)
+			managerTask := manager.ManagerTask{
+				Task:    tt.task,
+				Manager: &mgr,
+			}
+			item := managerTaskItem{ManagerTask: managerTask}
 
 			assert.Equal(t, tt.expectTitle, item.Title())
 			assert.Equal(t, tt.expectFilter, item.FilterValue())
@@ -63,18 +78,10 @@ func TestTaskItem(t *testing.T) {
 }
 
 func TestItemDelegate(t *testing.T) {
-	managerTitles := []manager.Title{
-		{Name: "task", Description: "Taskfile runner"},
-		{Name: "npm", Description: "Node.js package manager"},
-	}
-	taskCounts := []int{2, 2}
-	managerStartIndices := []int{0, 2}
+	var mgr manager.Manager = &mockManager{title: manager.Title{Name: "task", Description: "Taskfile runner"}}
 
 	t.Run("basic properties", func(t *testing.T) {
 		delegate := itemDelegate{
-			managerTitles:        managerTitles,
-			taskCounts:           taskCounts,
-			managerStartIndices:  managerStartIndices,
 			showManagerIndicator: true,
 		}
 
@@ -83,17 +90,18 @@ func TestItemDelegate(t *testing.T) {
 		assert.Nil(t, delegate.Update(nil, nil))
 	})
 
-	t.Run("render method", func(t *testing.T) {
+	t.Run("render method without manager indicator", func(t *testing.T) {
 		delegate := itemDelegate{
-			managerTitles:        managerTitles,
-			taskCounts:           taskCounts,
-			managerStartIndices:  managerStartIndices,
 			showManagerIndicator: false,
 		}
 
+		managerTask := manager.ManagerTask{
+			Task:    task.Task{Name: "build", Description: "Build application"},
+			Manager: &mgr,
+		}
+
 		tasks := []list.Item{
-			taskItem(task.Task{Name: "build", Description: "Build application"}),
-			taskItem(task.Task{Name: "test", Description: "Run tests"}),
+			managerTaskItem{ManagerTask: managerTask},
 		}
 
 		// Create a mock list model
@@ -105,19 +113,21 @@ func TestItemDelegate(t *testing.T) {
 		output := buf.String()
 		assert.Contains(t, output, "build")
 		assert.Contains(t, output, "Build application")
+		assert.NotContains(t, output, "[task]") // No manager indicator
 	})
 
 	t.Run("render with manager indicator", func(t *testing.T) {
 		delegate := itemDelegate{
-			managerTitles:        managerTitles,
-			taskCounts:           taskCounts,
-			managerStartIndices:  managerStartIndices,
 			showManagerIndicator: true,
 		}
 
+		managerTask := manager.ManagerTask{
+			Task:    task.Task{Name: "build", Description: "Build application"},
+			Manager: &mgr,
+		}
+
 		tasks := []list.Item{
-			taskItem(task.Task{Name: "build", Description: "Build application"}),
-			taskItem(task.Task{Name: "test", Description: "Run tests"}),
+			managerTaskItem{ManagerTask: managerTask},
 		}
 
 		listModel := list.New(tasks, delegate, 80, 10)
@@ -127,20 +137,22 @@ func TestItemDelegate(t *testing.T) {
 
 		output := buf.String()
 		assert.Contains(t, output, "build")
-		assert.Contains(t, output, "[task]") // Manager indicator
+		assert.Contains(t, output, "[task]") // Manager indicator should be present
 	})
 
 	t.Run("render with long descriptions", func(t *testing.T) {
 		delegate := itemDelegate{
-			managerTitles:        managerTitles,
-			taskCounts:           taskCounts,
-			managerStartIndices:  managerStartIndices,
 			showManagerIndicator: false,
 		}
 
 		longDescription := "This is a very long description that should be truncated to ensure proper formatting and alignment in the UI"
+		managerTask := manager.ManagerTask{
+			Task:    task.Task{Name: "build", Description: longDescription},
+			Manager: &mgr,
+		}
+
 		tasks := []list.Item{
-			taskItem(task.Task{Name: "build", Description: longDescription}),
+			managerTaskItem{ManagerTask: managerTask},
 		}
 
 		listModel := list.New(tasks, delegate, 80, 10)
@@ -152,13 +164,36 @@ func TestItemDelegate(t *testing.T) {
 		assert.Contains(t, output, "...")
 	})
 
-	t.Run("render non-taskItem", func(t *testing.T) {
+	t.Run("render non-managerTaskItem", func(t *testing.T) {
 		delegate := itemDelegate{}
 
 		var buf bytes.Buffer
 		delegate.Render(&buf, list.Model{}, 0, mockListItem{})
 
-		// Should not write anything for non-taskItem
+		// Should not write anything for non-managerTaskItem
 		assert.Empty(t, buf.String())
+	})
+
+	t.Run("render with long task name", func(t *testing.T) {
+		delegate := itemDelegate{
+			showManagerIndicator: false,
+		}
+
+		managerTask := manager.ManagerTask{
+			Task:    task.Task{Name: "very-long-task-name-that-exceeds-normal-length", Description: "Test description"},
+			Manager: &mgr,
+		}
+
+		tasks := []list.Item{
+			managerTaskItem{ManagerTask: managerTask},
+		}
+
+		listModel := list.New(tasks, delegate, 80, 10)
+
+		var buf bytes.Buffer
+		delegate.Render(&buf, listModel, 0, tasks[0])
+
+		output := buf.String()
+		assert.Contains(t, output, "...") // Long name should be truncated
 	})
 }
