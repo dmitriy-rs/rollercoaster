@@ -7,17 +7,8 @@ import (
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
 )
 
-// TaskManagerMock simulates a task manager (like Taskfile/Makefile)
-type TaskManagerMock struct {
-	title        manager.Title
-	tasks        []task.Task
-	listError    error
-	executeError error
-	executed     []ExecutedTask
-}
-
-// WorkspaceManagerMock simulates a workspace manager (like npm/yarn/pnpm)
-type WorkspaceManagerMock struct {
+// MockManager simulates any manager (task, workspace, etc.)
+type MockManager struct {
 	title        manager.Title
 	tasks        []task.Task
 	listError    error
@@ -31,8 +22,8 @@ type ExecutedTask struct {
 }
 
 // NewTaskManagerMock creates a new task manager mock
-func NewTaskManagerMock(name, description string, tasks []task.Task) *TaskManagerMock {
-	return &TaskManagerMock{
+func NewTaskManagerMock(name, description string, tasks []task.Task) *MockManager {
+	return &MockManager{
 		title: manager.Title{
 			Name:        name,
 			Description: description,
@@ -43,8 +34,8 @@ func NewTaskManagerMock(name, description string, tasks []task.Task) *TaskManage
 }
 
 // NewWorkspaceManagerMock creates a new workspace manager mock
-func NewWorkspaceManagerMock(name, description string, tasks []task.Task) *WorkspaceManagerMock {
-	return &WorkspaceManagerMock{
+func NewWorkspaceManagerMock(name, description string, tasks []task.Task) *MockManager {
+	return &MockManager{
 		title: manager.Title{
 			Name:        name,
 			Description: description,
@@ -54,81 +45,42 @@ func NewWorkspaceManagerMock(name, description string, tasks []task.Task) *Works
 	}
 }
 
-// TaskManagerMock implementations
-func (m *TaskManagerMock) GetTitle() manager.Title {
+// MockManager implementations
+func (m *MockManager) GetTitle() manager.Title {
 	return m.title
 }
 
-func (m *TaskManagerMock) ListTasks() ([]task.Task, error) {
+func (m *MockManager) ListTasks() ([]task.Task, error) {
 	if m.listError != nil {
 		return nil, m.listError
 	}
 	return m.tasks, nil
 }
 
-func (m *TaskManagerMock) ExecuteTask(task *task.Task, args ...string) {
+func (m *MockManager) ExecuteTask(task *task.Task, args ...string) {
 	m.executed = append(m.executed, ExecutedTask{
 		Task: task,
 		Args: args,
 	})
 }
 
-func (m *TaskManagerMock) SetListError(err error) {
+func (m *MockManager) SetListError(err error) {
 	m.listError = err
 }
 
-func (m *TaskManagerMock) SetExecuteError(err error) {
+func (m *MockManager) SetExecuteError(err error) {
 	m.executeError = err
 }
 
-func (m *TaskManagerMock) GetExecutedTasks() []ExecutedTask {
+func (m *MockManager) GetExecutedTasks() []ExecutedTask {
 	return m.executed
 }
 
-func (m *TaskManagerMock) ClearExecutedTasks() {
+func (m *MockManager) ClearExecutedTasks() {
 	m.executed = make([]ExecutedTask, 0)
 }
 
-func (m *TaskManagerMock) AddTask(t task.Task) {
-	m.tasks = append(m.tasks, t)
-}
-
-// WorkspaceManagerMock implementations
-func (m *WorkspaceManagerMock) GetTitle() manager.Title {
-	return m.title
-}
-
-func (m *WorkspaceManagerMock) ListTasks() ([]task.Task, error) {
-	if m.listError != nil {
-		return nil, m.listError
-	}
-	return m.tasks, nil
-}
-
-func (m *WorkspaceManagerMock) ExecuteTask(task *task.Task, args ...string) {
-	m.executed = append(m.executed, ExecutedTask{
-		Task: task,
-		Args: args,
-	})
-}
-
-func (m *WorkspaceManagerMock) SetListError(err error) {
-	m.listError = err
-}
-
-func (m *WorkspaceManagerMock) SetExecuteError(err error) {
-	m.executeError = err
-}
-
-func (m *WorkspaceManagerMock) GetExecutedTasks() []ExecutedTask {
-	return m.executed
-}
-
-func (m *WorkspaceManagerMock) ClearExecutedTasks() {
-	m.executed = make([]ExecutedTask, 0)
-}
-
-func (m *WorkspaceManagerMock) AddTask(t task.Task) {
+func (m *MockManager) AddTask(t task.Task) {
 	m.tasks = append(m.tasks, t)
 }
 
@@ -233,9 +185,9 @@ func CreateTasksWithSpecialCharacters() []task.Task {
 }
 
 // CreateManagersForMultiManagerTest creates managers for testing multi-manager scenarios
-func CreateManagersForMultiManagerTest() ([]manager.Manager, map[string]*TaskManagerMock, map[string]*WorkspaceManagerMock) {
-	taskMocks := make(map[string]*TaskManagerMock)
-	workspaceMocks := make(map[string]*WorkspaceManagerMock)
+func CreateManagersForMultiManagerTest() ([]manager.Manager, map[string]*MockManager, map[string]*MockManager) {
+	taskMocks := make(map[string]*MockManager)
+	workspaceMocks := make(map[string]*MockManager)
 	var managers []manager.Manager
 
 	// Create a task manager
@@ -252,7 +204,7 @@ func CreateManagersForMultiManagerTest() ([]manager.Manager, map[string]*TaskMan
 }
 
 // CreateErrorManager creates a manager that returns errors for testing error scenarios
-func CreateErrorManager() *TaskManagerMock {
+func CreateErrorManager() *MockManager {
 	manager := NewTaskManagerMock("error-manager", "Manager that returns errors", []task.Task{})
 	manager.SetListError(fmt.Errorf("failed to list tasks"))
 	return manager
