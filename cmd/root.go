@@ -7,7 +7,7 @@ import (
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager/parser"
-	"github.com/dmitriy-rs/rollercoaster/internal/ui"
+	"github.com/dmitriy-rs/rollercoaster/internal/ui/tasks-list"
 	"github.com/spf13/cobra"
 )
 
@@ -49,7 +49,7 @@ func execute(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(args) == 0 {
-		selectedManager, selectedTask, err := ui.RenderManagerList(managers, "")
+		selectedManager, selectedTask, err := ui.RenderTasksList(managers, "")
 		if err != nil {
 			return err
 		}
@@ -66,7 +66,7 @@ func execute(cmd *cobra.Command, args []string) error {
 		taskManager, closestTask, err := manager.FindClosestTaskFromList(managers, commandName)
 		if err != nil {
 			logger.Info("No tasks found")
-			selectedManager, selectedTask, err := ui.RenderManagerList(managers, "")
+			selectedManager, selectedTask, err := ui.RenderTasksList(managers, "")
 			if err != nil {
 				return err
 			}

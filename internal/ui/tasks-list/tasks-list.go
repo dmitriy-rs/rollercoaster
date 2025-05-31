@@ -153,7 +153,7 @@ func (m managerModel) View() string {
 	return header.String() + listView + "\n" + statusBar
 }
 
-func RenderManagerList(managers []manager.Manager, initialFilter string) (*manager.Manager, *task.Task, error) {
+func RenderTasksList(managers []manager.Manager, initialFilter string) (*manager.Manager, *task.Task, error) {
 	if len(managers) == 0 {
 		return nil, nil, fmt.Errorf("no managers provided")
 	}

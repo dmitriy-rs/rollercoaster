@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
-	"github.com/dmitriy-rs/rollercoaster/internal/ui/mocks"
+	"github.com/dmitriy-rs/rollercoaster/internal/ui/tasks-list/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -292,7 +292,7 @@ func TestManagerModel_AdditionalFeatures(t *testing.T) {
 
 func TestRenderManagerList_ErrorCases(t *testing.T) {
 	t.Run("no managers provided", func(t *testing.T) {
-		resultManager, resultTask, err := RenderManagerList([]manager.Manager{}, "")
+		resultManager, resultTask, err := RenderTasksList([]manager.Manager{}, "")
 
 		assert.Error(t, err)
 		assert.Nil(t, resultManager)
@@ -303,7 +303,7 @@ func TestRenderManagerList_ErrorCases(t *testing.T) {
 	t.Run("manager with list error", func(t *testing.T) {
 		errorManager := mocks.CreateErrorManager()
 
-		resultManager, resultTask, err := RenderManagerList([]manager.Manager{errorManager}, "")
+		resultManager, resultTask, err := RenderTasksList([]manager.Manager{errorManager}, "")
 
 		assert.Error(t, err)
 		assert.Nil(t, resultManager)
@@ -315,7 +315,7 @@ func TestRenderManagerList_ErrorCases(t *testing.T) {
 		emptyManager1 := mocks.NewTaskManagerMock("empty1", "Empty manager 1", []task.Task{})
 		emptyManager2 := mocks.NewTaskManagerMock("empty2", "Empty manager 2", []task.Task{})
 
-		resultManager, resultTask, err := RenderManagerList([]manager.Manager{emptyManager1, emptyManager2}, "")
+		resultManager, resultTask, err := RenderTasksList([]manager.Manager{emptyManager1, emptyManager2}, "")
 
 		assert.Error(t, err)
 		assert.Nil(t, resultManager)

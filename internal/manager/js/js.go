@@ -1,8 +1,8 @@
 package jsmanager
 
 import (
-	config "github.com/dmitriy-rs/rollercoaster/internal/manager/config-file"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
+	config "github.com/dmitriy-rs/rollercoaster/internal/manager/config-file"
 	"github.com/dmitriy-rs/rollercoaster/internal/task"
 )
 
