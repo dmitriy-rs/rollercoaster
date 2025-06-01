@@ -1,0 +1,164 @@
+# Cursor Rules for Rollercoaster Project
+
+## Project Overview
+This is a Go CLI application for running scripts across different task managers (npm, pnpm, yarn, Taskfile) with TUI components built using Bubble Tea and Lipgloss.
+
+## Testing Rules
+
+### Test Framework
+- **MUST** use `github.com/stretchr/testify` for all tests
+- Use `assert` package for simple assertions: `assert.Equal(t, expected, actual)`
+- Use `require` package when test should stop on failure: `require.NoError(t, err)`
+- Use `suite` package for complex test setups: `testify/suite`
+
+### Test Structure
+- Place tests in `*_test.go` files in the same package as the code being tested
+- Create `testdata/` folder next to test files for test fixtures and sample data
+- Create `mocks/` folder next to test files for mock implementations
+- Use table-driven tests for multiple test cases:
+```go
+func TestFunction(t *testing.T) {
+    tests := []struct {
+        name     string
+        input    string
+        expected string
+    }{
+        {"case1", "input1", "output1"},
+        {"case2", "input2", "output2"},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result := Function(tt.input)
+            assert.Equal(t, tt.expected, result)
+        })
+    }
+}
+```
+
+### Mock Strategy
+- Create interface-based mocks in `mocks/` folders
+- Use testify's `mock` package for dynamic mocks when needed
+- Prefer dependency injection for testability
+- Mock file system operations using `afero` or similar abstractions
+
+## Code Style and Standards
+
+### General Go Best Practices
+- Follow standard Go conventions (gofmt, golint, go vet)
+- Use meaningful variable and function names
+- Prefer explicit error handling over panics
+- Use context.Context for cancellation and timeouts in long-running operations
+
+### Package Organization
+- Follow the existing `internal/` structure:
+  - `internal/manager/` - Task manager implementations
+  - `internal/ui/` - TUI components  
+  - `internal/config/` - Configuration handling
+  - `internal/task/` - Task definitions and operations
+  - `internal/logger/` - Logging utilities
+- Keep packages focused and cohesive
+- Avoid circular dependencies
+
+### Performance Rules (Based on TASKS.md)
+- **Pre-allocate slices** when capacity is known: `make([]Type, 0, capacity)`
+- **Cache file system operations** - avoid repeated `os.Stat()` calls
+- **Batch file operations** instead of individual file checks
+- **Use sync.Pool** for frequently allocated objects
+- **Consider memory usage** in hot paths and UI rendering loops
+
+### Error Handling
+- Always handle errors explicitly, don't ignore them
+- Use `fmt.Errorf` with verb `%w` to wrap errors: `fmt.Errorf("operation failed: %w", err)`
+- Create custom error types for domain-specific errors
+- Use error constants for common error conditions
+
+### Concurrency
+- Use `golang.org/x/sync/errgroup` for coordinated goroutines
+- Implement proper context cancellation
+- Use channels for communication, mutexes for shared state
+- Be mindful of goroutine leaks
+
+### File System Operations
+- Use `filepath.Join()` for path construction
+- Handle different OS path separators properly
+- Use `os.DirFS` for sandboxed file system access when possible
+- Cache file existence checks and directory listings
+
+## UI/TUI Specific Rules
+
+### Bubble Tea Components
+- Implement the three required methods: `Init()`, `Update()`, `View()`
+- Keep state immutable in Update method, return new state
+- Use Cmd for side effects and async operations
+- Prefer small, focused components over monolithic ones
+
+### Lipgloss Styling
+- Cache reusable styles to avoid recreation in render loops
+- Use consistent color palette across components
+- Define style constants for reusability
+- Avoid creating styles in hot render paths
+
+### Performance for UI
+- Pre-compute render strings and cache by task ID
+- Implement virtual scrolling for large lists (>100 items)
+- Debounce UI updates to reduce render frequency
+- Reuse style objects instead of creating new ones
+
+## Configuration and Dependencies
+
+### Dependencies
+- Stick to established, well-maintained libraries
+- Prefer standard library when sufficient
+- Keep dependency tree minimal
+- Use semantic versioning for releases
+
+### Configuration
+- Use `github.com/spf13/viper` for configuration management (already in use)
+- Support environment variables and config files
+- Provide sensible defaults
+- Validate configuration on startup
+
+## Documentation
+- Write clear godoc comments for exported functions and types
+- Include usage examples in complex function documentation
+- Keep README.md updated with new features
+- Document breaking changes in commit messages
+
+## Git and Development Workflow
+
+### Commit Messages
+- Use conventional commit format: `type(scope): description`
+- Types: feat, fix, docs, style, refactor, test, chore
+- Keep first line under 50 characters
+- Include detailed description for complex changes
+
+### Branch Naming
+- Use descriptive branch names: `feature/add-bun-support`, `fix/memory-leak`
+- Prefix with type: `feature/`, `fix/`, `refactor/`, `test/`
+
+## Common Patterns
+
+### Manager Interface Implementation
+- Implement the `Manager` interface consistently across all manager types
+- Use factory pattern for manager creation
+- Cache manager instances when possible
+- Handle errors gracefully in manager operations
+
+### File Detection Patterns
+- Use single directory scan to detect multiple file types
+- Cache detection results with TTL
+- Prefer regex compilation at package init over runtime compilation
+- Use early returns to avoid deep nesting
+
+### Resource Cleanup
+- Always use `defer` for cleanup operations
+- Implement proper Close() methods for resources
+- Use context for cancellation in long-running operations
+- Handle partial failures gracefully
+
+## Security Considerations
+- Validate user input and file paths
+- Avoid executing arbitrary commands from untrusted sources
+- Use secure defaults for file permissions
+- Sanitize output when displaying user data

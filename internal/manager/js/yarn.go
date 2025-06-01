@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/dmitriy-rs/rollercoaster/internal/manager/cache"
 )
 
 type YarnWorkspace struct {
@@ -16,9 +18,13 @@ type YarnWorkspace struct {
 const yarnLockFilename = "yarn.lock"
 
 func ParseYarnWorkspace(dir *string) (*YarnWorkspace, error) {
-	yarnLockFile, err := os.OpenFile(filepath.Join(*dir, yarnLockFilename), os.O_RDONLY, 0644)
-	if err != nil {
+	filename := filepath.Join(*dir, yarnLockFilename)
+	if !cache.DefaultFSCache.FileExists(filename) {
 		return nil, nil
+	}
+	yarnLockFile, err := os.Open(filename)
+	if err != nil {
+		return nil, err
 	}
 	defer yarnLockFile.Close() //nolint:errcheck
 

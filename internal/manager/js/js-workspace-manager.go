@@ -11,6 +11,13 @@ type JsWorkspaceManager struct {
 	Workspace *JsWorkspace
 }
 
+var (
+	WorkspaceInstallTask      = "install"
+	WorkspaceAddTask          = "add"
+	WorkspaceRemoveTask       = "remove"
+	WorkspaceExecuteTask      = "x"
+)
+
 func (m *JsWorkspaceManager) ListTasks() ([]task.Task, error) {
 	tasks := []task.Task{
 		{

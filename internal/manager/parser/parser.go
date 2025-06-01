@@ -1,13 +1,13 @@
 package parser
 
 import (
-	"os"
 	"path/filepath"
 	"slices"
 	"sync"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
+	"github.com/dmitriy-rs/rollercoaster/internal/manager/cache"
 	configfile "github.com/dmitriy-rs/rollercoaster/internal/manager/config-file"
 	jsmanager "github.com/dmitriy-rs/rollercoaster/internal/manager/js"
 	taskmanager "github.com/dmitriy-rs/rollercoaster/internal/manager/task-manager"
@@ -96,7 +96,8 @@ func parseDirectoryAsync(dirIndex int, dir string, jsWorkspace *jsmanager.JsWork
 
 // parseDirectoryManagers parses both JS and task managers for a directory
 func parseDirectoryManagers(dir string, jsWorkspace *jsmanager.JsWorkspace) []manager.Manager {
-	var managers []manager.Manager
+	// Pre-allocate slice with capacity 2 (typically JS + Task manager)
+	managers := make([]manager.Manager, 0, 2)
 
 	// Parse JS manager if workspace exists
 	if jsWorkspace != nil {
@@ -146,8 +147,11 @@ func collectOrderedResults(results <-chan managerResult, numDirs int) []manager.
 		orderedResults[result.dirIndex] = result.managers
 	}
 
+	// Estimate total capacity needed (typically 2 managers per directory)
+	estimatedCapacity := numDirs * 2
+	managers := make([]manager.Manager, 0, estimatedCapacity)
+
 	// Flatten results while maintaining order
-	var managers []manager.Manager
 	for _, dirManagers := range orderedResults {
 		managers = append(managers, dirManagers...)
 	}
@@ -180,7 +184,7 @@ func findClosestGitDir(dir *string) string {
 	currentDir := *dir
 	for {
 		gitPath := filepath.Join(currentDir, ".git")
-		info, err := os.Stat(gitPath)
+		info, err := cache.DefaultFSCache.Stat(gitPath)
 		if err == nil && info.IsDir() {
 			return currentDir
 		}

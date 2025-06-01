@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/dmitriy-rs/rollercoaster/internal/manager/cache"
 )
 
 type PnpmWorkspace struct {
@@ -16,18 +18,21 @@ type PnpmWorkspace struct {
 const pnpmLockFilename = "pnpm-lock.yaml"
 
 func ParsePnpmWorkspace(dir *string) (*PnpmWorkspace, error) {
-	pnpmLockFile, err := os.OpenFile(filepath.Join(*dir, pnpmLockFilename), os.O_RDONLY, 0644)
-	if err != nil {
+	lockFilePath := filepath.Join(*dir, pnpmLockFilename)
+	if !cache.DefaultFSCache.FileExists(lockFilePath) {
 		return nil, nil
+	}
+
+	pnpmLockFile, err := os.Open(lockFilePath)
+	if err != nil {
+		return nil, err
 	}
 	defer pnpmLockFile.Close() //nolint:errcheck
 
-	firstLine, err := bufio.NewReader(pnpmLockFile).ReadString('\n')
-	if err != nil {
-		return nil, nil
-	}
+	scanner := bufio.NewScanner(pnpmLockFile)
+	scanner.Scan()
 
-	firstLine = strings.TrimSpace(firstLine)
+	firstLine := strings.TrimSpace(scanner.Text())
 	version := strings.TrimPrefix(firstLine, "lockfileVersion: '")
 	version = strings.TrimSuffix(version, "'")
 
@@ -39,7 +44,6 @@ func ParsePnpmWorkspace(dir *string) (*PnpmWorkspace, error) {
 	default:
 		return nil, fmt.Errorf("unsupported pnpm lockfile version: %s", version)
 	}
-
 }
 
 func GetDefaultPnpmWorkspace() PnpmWorkspace {
