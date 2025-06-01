@@ -1,11 +1,13 @@
 package cache
 
 import (
+	"container/heap"
 	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -13,13 +15,55 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-// UnifiedCache combines file system and parsed content caching
+// LRUEntry represents an entry in the LRU cache
+type LRUEntry struct {
+	key       string
+	timestamp time.Time
+	index     int // index in the heap
+}
+
+// LRUHeap implements a min-heap for LRU eviction
+type LRUHeap []*LRUEntry
+
+func (h LRUHeap) Len() int           { return len(h) }
+func (h LRUHeap) Less(i, j int) bool { return h[i].timestamp.Before(h[j].timestamp) }
+func (h LRUHeap) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
+	h[i].index = i
+	h[j].index = j
+}
+
+func (h *LRUHeap) Push(x interface{}) {
+	entry := x.(*LRUEntry)
+	entry.index = len(*h)
+	*h = append(*h, entry)
+}
+
+func (h *LRUHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	entry := old[n-1]
+	entry.index = -1
+	*h = old[0 : n-1]
+	return entry
+}
+
+// UnifiedCache combines file system and parsed content caching with optimized concurrency
 type UnifiedCache struct {
-	files   map[string]*CachedFile
-	dirs    map[string]*CachedDir
-	mutex   sync.RWMutex
+	files map[string]*CachedFile
+	dirs  map[string]*CachedDir
+
+	// Separate mutexes to reduce lock contention
+	filesMutex sync.RWMutex
+	dirsMutex  sync.RWMutex
+
+	// LRU tracking for efficient eviction
+	lruHeap    LRUHeap
+	lruEntries map[string]*LRUEntry
+	lruMutex   sync.Mutex
+
 	ttl     time.Duration
-	maxSize int // Prevent unbounded growth
+	maxSize int
 }
 
 // CachedFile holds all file-related information in one place
@@ -40,13 +84,15 @@ type CachedDir struct {
 	Timestamp time.Time
 }
 
-// NewUnifiedCache creates a new unified cache
+// NewUnifiedCache creates a new unified cache with optimized concurrency
 func NewUnifiedCache(ttl time.Duration, maxSize int) *UnifiedCache {
 	return &UnifiedCache{
-		files:   make(map[string]*CachedFile),
-		dirs:    make(map[string]*CachedDir),
-		ttl:     ttl,
-		maxSize: maxSize,
+		files:      make(map[string]*CachedFile),
+		dirs:       make(map[string]*CachedDir),
+		lruHeap:    make(LRUHeap, 0, maxSize),
+		lruEntries: make(map[string]*LRUEntry),
+		ttl:        ttl,
+		maxSize:    maxSize,
 	}
 }
 
@@ -57,26 +103,61 @@ func (c *UnifiedCache) isExpired(timestamp time.Time) bool {
 	return time.Since(timestamp) > c.ttl
 }
 
+// updateLRU updates the LRU tracking for a given key
+func (c *UnifiedCache) updateLRU(key string) {
+	c.lruMutex.Lock()
+	defer c.lruMutex.Unlock()
+
+	now := time.Now()
+	if entry, exists := c.lruEntries[key]; exists {
+		// Update existing entry
+		entry.timestamp = now
+		heap.Fix(&c.lruHeap, entry.index)
+	} else {
+		// Add new entry
+		entry := &LRUEntry{
+			key:       key,
+			timestamp: now,
+		}
+		c.lruEntries[key] = entry
+		heap.Push(&c.lruHeap, entry)
+	}
+}
+
+// removeLRU removes a key from LRU tracking
+func (c *UnifiedCache) removeLRU(key string) {
+	c.lruMutex.Lock()
+	defer c.lruMutex.Unlock()
+
+	if entry, exists := c.lruEntries[key]; exists {
+		heap.Remove(&c.lruHeap, entry.index)
+		delete(c.lruEntries, key)
+	}
+}
+
 // GetFileInfo returns file info, reading if necessary
 func (c *UnifiedCache) GetFileInfo(path string) (fs.FileInfo, error) {
-	c.mutex.RLock()
+	c.filesMutex.RLock()
 	if cached, exists := c.files[path]; exists && !c.isExpired(cached.Timestamp) {
-		c.mutex.RUnlock()
+		c.filesMutex.RUnlock()
+		c.updateLRU(path)
 		return cached.Info, cached.Error
 	}
-	c.mutex.RUnlock()
+	c.filesMutex.RUnlock()
 
 	// Cache miss - read from file system
 	info, err := os.Stat(path)
 
-	c.mutex.Lock()
+	c.filesMutex.Lock()
 	c.files[path] = &CachedFile{
 		Info:      info,
 		Error:     err,
 		Timestamp: time.Now(),
 	}
+	c.filesMutex.Unlock()
+
+	c.updateLRU(path)
 	c.evictIfNeeded()
-	c.mutex.Unlock()
 
 	return info, err
 }
@@ -89,12 +170,13 @@ func (c *UnifiedCache) FileExists(path string) bool {
 
 // ReadFile returns file content, caching both stat and content
 func (c *UnifiedCache) ReadFile(path string) ([]byte, error) {
-	c.mutex.RLock()
+	c.filesMutex.RLock()
 	if cached, exists := c.files[path]; exists && !c.isExpired(cached.Timestamp) && cached.Content != nil {
-		c.mutex.RUnlock()
+		c.filesMutex.RUnlock()
+		c.updateLRU(path)
 		return cached.Content, cached.Error
 	}
-	c.mutex.RUnlock()
+	c.filesMutex.RUnlock()
 
 	// Read file and stat info together
 	content, err := os.ReadFile(path)
@@ -103,37 +185,40 @@ func (c *UnifiedCache) ReadFile(path string) ([]byte, error) {
 		info, _ = os.Stat(path) // Get file info for complete cache entry
 	}
 
-	c.mutex.Lock()
+	c.filesMutex.Lock()
 	c.files[path] = &CachedFile{
 		Info:      info,
 		Content:   content,
 		Error:     err,
 		Timestamp: time.Now(),
 	}
+	c.filesMutex.Unlock()
+
+	c.updateLRU(path)
 	c.evictIfNeeded()
-	c.mutex.Unlock()
 
 	return content, err
 }
 
 // ParseFile reads and parses a config file, caching the result
 func (c *UnifiedCache) ParseFile(path string, target interface{}) error {
-	c.mutex.RLock()
+	c.filesMutex.RLock()
 	if cached, exists := c.files[path]; exists && !c.isExpired(cached.Timestamp) {
 		// Check if we have the parsed version cached
 		if cached.Parsed != nil {
-			c.mutex.RUnlock()
-			// Copy parsed content to target
+			c.filesMutex.RUnlock()
+			c.updateLRU(path)
+			// Copy parsed content to target using proper deep copy
 			return copyParsedContent(cached.Parsed, target)
 		}
 		// We have content but not parsed version
 		if cached.Content != nil && cached.Error == nil {
 			content := cached.Content
-			c.mutex.RUnlock()
+			c.filesMutex.RUnlock()
 			return c.parseAndCache(path, content, target)
 		}
 	}
-	c.mutex.RUnlock()
+	c.filesMutex.RUnlock()
 
 	// Need to read file first
 	content, err := c.ReadFile(path)
@@ -149,12 +234,26 @@ func (c *UnifiedCache) parseAndCache(path string, content []byte, target interfa
 	// Determine file type and parse
 	ext := strings.ToLower(filepath.Ext(path))
 	var err error
+	var parsed interface{}
 
+	// Parse into a temporary value to cache
 	switch ext {
 	case ".json":
-		err = json.Unmarshal(content, target)
+		var tempResult interface{}
+		err = json.Unmarshal(content, &tempResult)
+		if err == nil {
+			parsed = tempResult
+			// Also parse into the target
+			err = json.Unmarshal(content, target)
+		}
 	case ".yaml", ".yml":
-		err = yaml.Unmarshal(content, target)
+		var tempResult interface{}
+		err = yaml.Unmarshal(content, &tempResult)
+		if err == nil {
+			parsed = tempResult
+			// Also parse into the target
+			err = yaml.Unmarshal(content, target)
+		}
 	default:
 		return fmt.Errorf("unsupported file type: %s", ext)
 	}
@@ -164,24 +263,25 @@ func (c *UnifiedCache) parseAndCache(path string, content []byte, target interfa
 	}
 
 	// Update cache with parsed content
-	c.mutex.Lock()
+	c.filesMutex.Lock()
 	if cached, exists := c.files[path]; exists {
-		cached.Parsed = target
+		cached.Parsed = parsed
 		cached.ParsedAs = ext
 	}
-	c.mutex.Unlock()
+	c.filesMutex.Unlock()
 
 	return nil
 }
 
 // ReadDir returns directory entries with efficient file existence lookup
 func (c *UnifiedCache) ReadDir(dir string) ([]fs.DirEntry, error) {
-	c.mutex.RLock()
+	c.dirsMutex.RLock()
 	if cached, exists := c.dirs[dir]; exists && !c.isExpired(cached.Timestamp) {
-		c.mutex.RUnlock()
+		c.dirsMutex.RUnlock()
+		c.updateLRU(dir)
 		return cached.Entries, cached.Error
 	}
-	c.mutex.RUnlock()
+	c.dirsMutex.RUnlock()
 
 	// Read directory
 	entries, err := os.ReadDir(dir)
@@ -195,15 +295,17 @@ func (c *UnifiedCache) ReadDir(dir string) ([]fs.DirEntry, error) {
 		}
 	}
 
-	c.mutex.Lock()
+	c.dirsMutex.Lock()
 	c.dirs[dir] = &CachedDir{
 		Entries:   entries,
 		FileMap:   fileMap,
 		Error:     err,
 		Timestamp: time.Now(),
 	}
+	c.dirsMutex.Unlock()
+
+	c.updateLRU(dir)
 	c.evictIfNeeded()
-	c.mutex.Unlock()
 
 	return entries, err
 }
@@ -212,16 +314,17 @@ func (c *UnifiedCache) ReadDir(dir string) ([]fs.DirEntry, error) {
 func (c *UnifiedCache) FindFilesInDirectory(dir string, filenames []string) map[string]bool {
 	result := make(map[string]bool)
 
-	c.mutex.RLock()
+	c.dirsMutex.RLock()
 	if cached, exists := c.dirs[dir]; exists && !c.isExpired(cached.Timestamp) && cached.FileMap != nil {
 		// Use cached directory listing
 		for _, filename := range filenames {
 			result[filename] = cached.FileMap[filename]
 		}
-		c.mutex.RUnlock()
+		c.dirsMutex.RUnlock()
+		c.updateLRU(dir)
 		return result
 	}
-	c.mutex.RUnlock()
+	c.dirsMutex.RUnlock()
 
 	// Cache miss - read directory
 	_, err := c.ReadDir(dir)
@@ -233,13 +336,13 @@ func (c *UnifiedCache) FindFilesInDirectory(dir string, filenames []string) map[
 	}
 
 	// Now use the cached result
-	c.mutex.RLock()
+	c.dirsMutex.RLock()
 	if cached, exists := c.dirs[dir]; exists && cached.FileMap != nil {
 		for _, filename := range filenames {
 			result[filename] = cached.FileMap[filename]
 		}
 	}
-	c.mutex.RUnlock()
+	c.dirsMutex.RUnlock()
 
 	return result
 }
@@ -278,109 +381,177 @@ type UnifiedFileResult struct {
 	Error   error
 }
 
-// evictIfNeeded removes old entries if cache is too large
+// evictIfNeeded removes old entries if cache is too large using efficient LRU
 func (c *UnifiedCache) evictIfNeeded() {
+	c.filesMutex.RLock()
+	c.dirsMutex.RLock()
 	totalEntries := len(c.files) + len(c.dirs)
+	c.dirsMutex.RUnlock()
+	c.filesMutex.RUnlock()
+
 	if totalEntries <= c.maxSize {
 		return
 	}
 
-	// Simple eviction: remove 20% of oldest entries
+	// Evict 20% of entries or at least 10
 	removeCount := totalEntries / 5
-	if removeCount < 1 {
-		removeCount = 1
+	if removeCount < 10 {
+		removeCount = 10
 	}
 
-	// Find oldest file entries
-	oldestFiles := make([]string, 0, removeCount/2)
-	oldestTime := time.Now()
+	c.lruMutex.Lock()
+	toRemove := make([]string, 0, removeCount)
 
-	for path, entry := range c.files {
-		if len(oldestFiles) < removeCount/2 {
-			oldestFiles = append(oldestFiles, path)
-			if entry.Timestamp.Before(oldestTime) {
-				oldestTime = entry.Timestamp
-			}
-		} else if entry.Timestamp.Before(oldestTime) {
-			oldestFiles[0] = path
-			oldestTime = entry.Timestamp
-		}
+	// Use heap to efficiently find oldest entries
+	for len(toRemove) < removeCount && c.lruHeap.Len() > 0 {
+		entry := heap.Pop(&c.lruHeap).(*LRUEntry)
+		toRemove = append(toRemove, entry.key)
+		delete(c.lruEntries, entry.key)
 	}
+	c.lruMutex.Unlock()
 
-	// Remove oldest files
-	for _, path := range oldestFiles {
-		delete(c.files, path)
-	}
+	// Remove from actual caches
+	for _, key := range toRemove {
+		c.filesMutex.Lock()
+		delete(c.files, key)
+		c.filesMutex.Unlock()
 
-	// Remove some old directories too
-	dirRemoveCount := removeCount - len(oldestFiles)
-	if dirRemoveCount > 0 {
-		removed := 0
-		for path := range c.dirs {
-			delete(c.dirs, path)
-			removed++
-			if removed >= dirRemoveCount {
-				break
-			}
-		}
+		c.dirsMutex.Lock()
+		delete(c.dirs, key)
+		c.dirsMutex.Unlock()
 	}
 }
 
-// copyParsedContent copies cached parsed content to target
+// copyParsedContent efficiently copies cached parsed content to target using reflection
 func copyParsedContent(source, target interface{}) error {
-	// This is a simplified version - in practice you might want more sophisticated copying
-	// For now, we'll re-parse since the performance hit is minimal compared to file I/O
-	return fmt.Errorf("re-parse needed")
+	if source == nil {
+		return fmt.Errorf("source is nil")
+	}
+
+	sourceValue := reflect.ValueOf(source)
+	targetValue := reflect.ValueOf(target)
+
+	// Target must be a pointer
+	if targetValue.Kind() != reflect.Ptr {
+		return fmt.Errorf("target must be a pointer")
+	}
+
+	targetElem := targetValue.Elem()
+	if !targetElem.CanSet() {
+		return fmt.Errorf("target cannot be set")
+	}
+
+	// Handle different source types
+	switch sourceValue.Kind() {
+	case reflect.Map, reflect.Slice, reflect.Array:
+		// For complex types, use JSON marshal/unmarshal for deep copy
+		jsonData, err := json.Marshal(source)
+		if err != nil {
+			return fmt.Errorf("failed to marshal source: %w", err)
+		}
+
+		err = json.Unmarshal(jsonData, target)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal to target: %w", err)
+		}
+		return nil
+
+	default:
+		// For simple types, direct assignment
+		if sourceValue.Type().AssignableTo(targetElem.Type()) {
+			targetElem.Set(sourceValue)
+			return nil
+		}
+
+		// Try conversion
+		if sourceValue.Type().ConvertibleTo(targetElem.Type()) {
+			targetElem.Set(sourceValue.Convert(targetElem.Type()))
+			return nil
+		}
+
+		return fmt.Errorf("cannot assign %T to %T", source, target)
+	}
 }
 
 // ClearExpired removes all expired entries from the cache
 func (c *UnifiedCache) ClearExpired() {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
 	now := time.Now()
+	var expiredKeys []string
 
-	// Clear expired file entries
+	// Collect expired file entries
+	c.filesMutex.RLock()
 	for path, entry := range c.files {
 		if now.Sub(entry.Timestamp) > c.ttl {
-			delete(c.files, path)
+			expiredKeys = append(expiredKeys, path)
 		}
 	}
+	c.filesMutex.RUnlock()
 
-	// Clear expired directory entries
+	// Collect expired directory entries
+	c.dirsMutex.RLock()
 	for path, entry := range c.dirs {
 		if now.Sub(entry.Timestamp) > c.ttl {
-			delete(c.dirs, path)
+			expiredKeys = append(expiredKeys, path)
 		}
+	}
+	c.dirsMutex.RUnlock()
+
+	// Remove expired entries
+	for _, key := range expiredKeys {
+		c.filesMutex.Lock()
+		delete(c.files, key)
+		c.filesMutex.Unlock()
+
+		c.dirsMutex.Lock()
+		delete(c.dirs, key)
+		c.dirsMutex.Unlock()
+
+		c.removeLRU(key)
 	}
 }
 
 // Clear removes all entries
 func (c *UnifiedCache) Clear() {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.filesMutex.Lock()
+	c.dirsMutex.Lock()
+	c.lruMutex.Lock()
 
 	c.files = make(map[string]*CachedFile)
 	c.dirs = make(map[string]*CachedDir)
+	c.lruHeap = make(LRUHeap, 0, c.maxSize)
+	c.lruEntries = make(map[string]*LRUEntry)
+
+	c.lruMutex.Unlock()
+	c.dirsMutex.Unlock()
+	c.filesMutex.Unlock()
 }
 
 // GetStats returns cache statistics
 func (c *UnifiedCache) GetStats() UnifiedCacheStats {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.filesMutex.RLock()
+	c.dirsMutex.RLock()
+	c.lruMutex.Lock()
 
-	return UnifiedCacheStats{
+	stats := UnifiedCacheStats{
 		FileEntries: len(c.files),
 		DirEntries:  len(c.dirs),
+		LRUEntries:  len(c.lruEntries),
 		TTL:         c.ttl,
 		MaxSize:     c.maxSize,
 	}
+
+	c.lruMutex.Unlock()
+	c.dirsMutex.RUnlock()
+	c.filesMutex.RUnlock()
+
+	return stats
 }
 
 // UnifiedCacheStats represents cache statistics
 type UnifiedCacheStats struct {
 	FileEntries int
 	DirEntries  int
+	LRUEntries  int
 	TTL         time.Duration
 	MaxSize     int
 }
