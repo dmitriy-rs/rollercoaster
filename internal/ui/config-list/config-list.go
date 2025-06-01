@@ -228,14 +228,15 @@ func (m model) View() string {
 		var valueStr string
 		var style lipgloss.Style
 
-		if configItem.ItemType == "boolean" {
+		switch configItem.ItemType {
+		case "boolean":
 			if configItem.Value != nil && configItem.Value.(bool) {
 				valueStr = booleanStyle.Render("✓ enabled")
 			} else {
 				valueStr = falseStyle.Render("✗ disabled")
 			}
 			style = itemStyle
-		} else if configItem.ItemType == "select" {
+		case "select":
 			if m.editing && i == m.currentIndex {
 				// Show all options with selection highlighting
 				options := ""

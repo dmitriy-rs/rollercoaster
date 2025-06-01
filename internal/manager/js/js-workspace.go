@@ -45,6 +45,14 @@ func ParseJsWorkspace(dir *string, defaultJSManager string) (*JsWorkspace, error
 
 	if pmInfo != nil {
 		switch pmInfo.Type {
+		case "bun":
+			bunWorkspace, err := ParseBunWorkspace(dir)
+			if err != nil {
+				logger.Warning(err.Error())
+			}
+			if bunWorkspace != nil {
+				workspace = bunWorkspace
+			}
 		case "pnpm":
 			pnpmWorkspace, err := ParsePnpmWorkspace(dir)
 			if err != nil {
@@ -87,18 +95,31 @@ func ParseJsWorkspace(dir *string, defaultJSManager string) (*JsWorkspace, error
 // detectPackageManagerOptimized uses single directory scan to detect package managers
 func detectPackageManagerOptimized(dir string) (*PackageManagerInfo, error) {
 	// Batch check for all lock files in one operation
-	lockFiles := []string{pnpmLockFilename, "yarn.lock", "package-lock.json"}
+	lockFiles := []string{bunLockFilename, bunLockTextFilename, pnpmLockFilename, "yarn.lock", "package-lock.json"}
 	lockFileExists := cache.DefaultFSCache.FindFilesInDirectory(dir, lockFiles)
 
 	// Count existing lock files for early validation
 	var detectedPMs []string
 	var pmInfo *PackageManagerInfo
 
+	if lockFileExists[bunLockFilename] || lockFileExists[bunLockTextFilename] {
+		detectedPMs = append(detectedPMs, "bun")
+		lockFile := bunLockFilename
+		if lockFileExists[bunLockTextFilename] {
+			lockFile = bunLockTextFilename
+		}
+		pmInfo = &PackageManagerInfo{
+			Type:     "bun",
+			LockFile: lockFile,
+		}
+	}
 	if lockFileExists[pnpmLockFilename] {
 		detectedPMs = append(detectedPMs, "pnpm")
-		pmInfo = &PackageManagerInfo{
-			Type:     "pnpm",
-			LockFile: pnpmLockFilename,
+		if pmInfo == nil {
+			pmInfo = &PackageManagerInfo{
+				Type:     "pnpm",
+				LockFile: pnpmLockFilename,
+			}
 		}
 	}
 	if lockFileExists["yarn.lock"] {
@@ -130,6 +151,9 @@ func detectPackageManagerOptimized(dir string) (*PackageManagerInfo, error) {
 
 func parseDefaultJSManager(defaultJSManager string) JsWorkspace {
 	switch defaultJSManager {
+	case "bun":
+		workspace := GetDefaultBunWorkspace()
+		return &workspace
 	case "npm":
 		workspace := GetDefaultNpmWorkspace()
 		return &workspace

@@ -7,9 +7,9 @@ import (
 )
 
 var configCmd = &cobra.Command{
-	Use:   "config",
-	Short: "Open configuration interface",
-	Long:  "Open a TUI interface to manage rollercoaster configuration settings including default JS manager, auto-select behavior, and other preferences.",
+	Use:     "config",
+	Short:   "Open configuration interface",
+	Long:    "Open a TUI interface to manage rollercoaster configuration settings including default JS manager, auto-select behavior, and other preferences.",
 	Version: VERSION,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := ui.RenderConfigList(); err != nil {

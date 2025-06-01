@@ -91,10 +91,8 @@ func validateDefaultJSManager(defaultJSManager string) string {
 		return "pnpm"
 	case "bun":
 		return "bun"
-	case "deno":
-		return "deno"
 	}
-	logger.Warning("Invalid default JS manager: " + defaultJSManager + ". Allowed values are: npm, yarn, pnpm, bun, deno")
+	logger.Warning("Invalid default JS manager: " + defaultJSManager + ". Allowed values are: npm, yarn, pnpm, bun")
 	return ""
 }
 
@@ -114,10 +112,10 @@ func GetAllConfigItems() []ConfigItem {
 		{
 			Key:         "DefaultJSManager",
 			Label:       "Default JS Manager",
-			Description: "Choose the default JavaScript package manager (npm, yarn, pnpm, bun, deno)",
+			Description: "Choose the default JavaScript package manager (npm, yarn, pnpm, bun)",
 			ItemType:    "select",
 			Value:       viper.GetString("DefaultJSManager"),
-			Options:     []string{"npm", "yarn", "pnpm", "bun", "deno"},
+			Options:     []string{"npm", "bun", "pnpm", "yarn"},
 		},
 		{
 			Key:         "AutoSelectClosest",
@@ -188,7 +186,7 @@ func loadConfigFile() {
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Config file not found, create it
-			createConfig()
+			_ = createConfig()
 		}
 	}
 }
