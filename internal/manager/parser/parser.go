@@ -11,6 +11,7 @@ import (
 	configfile "github.com/dmitriy-rs/rollercoaster/internal/manager/config-file"
 	jsmanager "github.com/dmitriy-rs/rollercoaster/internal/manager/js"
 	taskmanager "github.com/dmitriy-rs/rollercoaster/internal/manager/task-manager"
+	"golang.org/x/sync/errgroup"
 )
 
 type ParseManagerConfig struct {
@@ -94,47 +95,91 @@ func parseDirectoryAsync(dirIndex int, dir string, jsWorkspace *jsmanager.JsWork
 	}
 }
 
-// parseDirectoryManagers parses both JS and task managers for a directory
+// parseDirectoryManagers parses both JS and task managers for a directory concurrently
 func parseDirectoryManagers(dir string, jsWorkspace *jsmanager.JsWorkspace) []manager.Manager {
 	// Pre-allocate slice with capacity 2 (typically JS + Task manager)
 	managers := make([]manager.Manager, 0, 2)
 
-	// Parse JS manager if workspace exists
+	// Use errgroup for concurrent parsing with proper error handling
+	var eg errgroup.Group
+	var jsManager, taskMgr manager.Manager
+	var jsErr, taskErr error
+
+	// Parse JS manager concurrently if workspace exists
 	if jsWorkspace != nil {
-		if jsManager := parseJSManager(dir, jsWorkspace); jsManager != nil {
-			managers = append(managers, jsManager)
-		}
+		eg.Go(func() error {
+			jsManager, jsErr = parseJSManagerWithError(dir, jsWorkspace)
+			return nil // Don't fail the group, just capture the error
+		})
 	}
 
-	// Parse task manager
-	if taskMgr := parseTaskManager(dir); taskMgr != nil {
+	// Parse task manager concurrently
+	eg.Go(func() error {
+		taskMgr, taskErr = parseTaskManagerWithError(dir)
+		return nil // Don't fail the group, just capture the error
+	})
+
+	// Wait for both operations to complete
+	eg.Wait()
+
+	// Log any errors that occurred
+	if jsErr != nil {
+		logger.Warning(jsErr.Error())
+	}
+	if taskErr != nil {
+		logger.Warning(taskErr.Error())
+	}
+
+	// Collect successful results
+	if jsManager != nil {
+		managers = append(managers, jsManager)
+	}
+	if taskMgr != nil {
 		managers = append(managers, taskMgr)
 	}
 
 	return managers
 }
 
-// parseJSManager attempts to parse a JS manager for the directory
-func parseJSManager(dir string, jsWorkspace *jsmanager.JsWorkspace) manager.Manager {
+// parseJSManagerWithError attempts to parse a JS manager and returns both result and error
+func parseJSManagerWithError(dir string, jsWorkspace *jsmanager.JsWorkspace) (manager.Manager, error) {
 	jsManager, err := jsmanager.ParseJsManager(&dir, jsWorkspace)
 	if err != nil {
-		logger.Warning(err.Error())
-		return nil
+		return nil, err
 	}
 	if jsManager == nil {
+		return nil, nil
+	}
+	return jsManager, nil
+}
+
+// parseTaskManagerWithError attempts to parse a task manager and returns both result and error
+func parseTaskManagerWithError(dir string) (manager.Manager, error) {
+	taskMgr, err := taskmanager.ParseTaskManager(&dir)
+	if err != nil {
+		return nil, err
+	}
+	if taskMgr == nil {
+		return nil, nil
+	}
+	return taskMgr, nil
+}
+
+// parseJSManager attempts to parse a JS manager for the directory (legacy method for compatibility)
+func parseJSManager(dir string, jsWorkspace *jsmanager.JsWorkspace) manager.Manager {
+	jsManager, err := parseJSManagerWithError(dir, jsWorkspace)
+	if err != nil {
+		logger.Warning(err.Error())
 		return nil
 	}
 	return jsManager
 }
 
-// parseTaskManager attempts to parse a task manager for the directory
+// parseTaskManager attempts to parse a task manager for the directory (legacy method for compatibility)
 func parseTaskManager(dir string) manager.Manager {
-	taskMgr, err := taskmanager.ParseTaskManager(&dir)
+	taskMgr, err := parseTaskManagerWithError(dir)
 	if err != nil {
 		logger.Warning(err.Error())
-		return nil
-	}
-	if taskMgr == nil {
 		return nil
 	}
 	return taskMgr

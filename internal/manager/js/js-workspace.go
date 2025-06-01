@@ -10,6 +10,13 @@ import (
 	"github.com/dmitriy-rs/rollercoaster/internal/manager/cache"
 )
 
+// PackageManagerInfo holds information about detected package manager
+type PackageManagerInfo struct {
+	Type     string
+	LockFile string
+	Version  string
+}
+
 type JsWorkspace interface {
 	Name() string
 	ExecName() string
@@ -27,66 +34,46 @@ func ParseJsWorkspace(dir *string, defaultJSManager string) (*JsWorkspace, error
 		return nil, nil
 	}
 
-	// Batch check for all lock files in one operation
-	lockFiles := []string{pnpmLockFilename, "yarn.lock", "package-lock.json"}
-	lockFileExists := cache.DefaultFSCache.FindFilesInDirectory(*dir, lockFiles)
-
-	// Count existing lock files for early validation
-	lockFileCount := 0
-	pnpmLockExists := lockFileExists[pnpmLockFilename]
-	yarnLockExists := lockFileExists["yarn.lock"]
-	npmLockExists := lockFileExists["package-lock.json"]
-
-	if pnpmLockExists {
-		lockFileCount++
-	}
-	if yarnLockExists {
-		lockFileCount++
-	}
-	if npmLockExists {
-		lockFileCount++
-	}
-
-	// Early exit if multiple lock files detected
-	if lockFileCount > 1 {
-		return nil, fmt.Errorf("multiple package manager lock files detected")
+	// Optimized package manager detection with single directory scan
+	pmInfo, err := detectPackageManagerOptimized(*dir)
+	if err != nil {
+		return nil, err
 	}
 
 	// Pre-allocate slice with capacity 1 (typically only one workspace type)
-	workspaces := make([]JsWorkspace, 0, 1)
+	var workspace JsWorkspace
 
-	if pnpmLockExists {
-		pnpmWorkspace, err := ParsePnpmWorkspace(dir)
-		if err != nil {
-			logger.Warning(err.Error())
-		}
-		if pnpmWorkspace != nil {
-			workspaces = append(workspaces, pnpmWorkspace)
-		}
-	}
-
-	if yarnLockExists {
-		yarnWorkspace, err := ParseYarnWorkspace(dir)
-		if err != nil {
-			logger.Warning(err.Error())
-		}
-		if yarnWorkspace != nil {
-			workspaces = append(workspaces, yarnWorkspace)
-		}
-	}
-
-	if npmLockExists {
-		npmWorkspace, err := ParseNpmWorkspace(dir)
-		if err != nil {
-			logger.Warning(err.Error())
-		}
-		if npmWorkspace != nil {
-			workspaces = append(workspaces, npmWorkspace)
+	if pmInfo != nil {
+		switch pmInfo.Type {
+		case "pnpm":
+			pnpmWorkspace, err := ParsePnpmWorkspace(dir)
+			if err != nil {
+				logger.Warning(err.Error())
+			}
+			if pnpmWorkspace != nil {
+				workspace = pnpmWorkspace
+			}
+		case "yarn":
+			yarnWorkspace, err := ParseYarnWorkspace(dir)
+			if err != nil {
+				logger.Warning(err.Error())
+			}
+			if yarnWorkspace != nil {
+				workspace = yarnWorkspace
+			}
+		case "npm":
+			npmWorkspace, err := ParseNpmWorkspace(dir)
+			if err != nil {
+				logger.Warning(err.Error())
+			}
+			if npmWorkspace != nil {
+				workspace = npmWorkspace
+			}
 		}
 	}
 
 	// Only use default if package.json exists but no workspace was detected
-	if len(workspaces) == 0 {
+	if workspace == nil {
 		defaultJSManager := parseDefaultJSManager(defaultJSManager)
 		if defaultJSManager == nil {
 			return nil, nil
@@ -94,16 +81,51 @@ func ParseJsWorkspace(dir *string, defaultJSManager string) (*JsWorkspace, error
 		return &defaultJSManager, nil
 	}
 
-	if len(workspaces) > 1 {
-		formattedWorkspaces := strings.Builder{}
-		for _, workspace := range workspaces {
-			formattedWorkspaces.WriteString(workspace.Name())
-			formattedWorkspaces.WriteString(", ")
+	return &workspace, nil
+}
+
+// detectPackageManagerOptimized uses single directory scan to detect package managers
+func detectPackageManagerOptimized(dir string) (*PackageManagerInfo, error) {
+	// Batch check for all lock files in one operation
+	lockFiles := []string{pnpmLockFilename, "yarn.lock", "package-lock.json"}
+	lockFileExists := cache.DefaultFSCache.FindFilesInDirectory(dir, lockFiles)
+
+	// Count existing lock files for early validation
+	var detectedPMs []string
+	var pmInfo *PackageManagerInfo
+
+	if lockFileExists[pnpmLockFilename] {
+		detectedPMs = append(detectedPMs, "pnpm")
+		pmInfo = &PackageManagerInfo{
+			Type:     "pnpm",
+			LockFile: pnpmLockFilename,
 		}
-		return nil, fmt.Errorf("multiple workspace package managers found: %s", formattedWorkspaces.String())
+	}
+	if lockFileExists["yarn.lock"] {
+		detectedPMs = append(detectedPMs, "yarn")
+		if pmInfo == nil {
+			pmInfo = &PackageManagerInfo{
+				Type:     "yarn",
+				LockFile: "yarn.lock",
+			}
+		}
+	}
+	if lockFileExists["package-lock.json"] {
+		detectedPMs = append(detectedPMs, "npm")
+		if pmInfo == nil {
+			pmInfo = &PackageManagerInfo{
+				Type:     "npm",
+				LockFile: "package-lock.json",
+			}
+		}
 	}
 
-	return &workspaces[0], nil
+	// Early exit if multiple lock files detected
+	if len(detectedPMs) > 1 {
+		return nil, fmt.Errorf("multiple package manager lock files detected: %s", strings.Join(detectedPMs, ", "))
+	}
+
+	return pmInfo, nil
 }
 
 func parseDefaultJSManager(defaultJSManager string) JsWorkspace {
@@ -121,4 +143,3 @@ func parseDefaultJSManager(defaultJSManager string) JsWorkspace {
 		return nil
 	}
 }
-

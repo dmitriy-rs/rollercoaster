@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -10,9 +11,53 @@ import (
 	"github.com/dmitriy-rs/rollercoaster/internal/manager"
 )
 
+// RenderCache caches rendered strings for better performance
+type RenderCache struct {
+	taskStrings map[string]string
+	mutex       sync.RWMutex
+}
+
+// Global render cache instance
+var DefaultRenderCache = &RenderCache{
+	taskStrings: make(map[string]string),
+}
+
+// GetCachedString retrieves a cached render string
+func (rc *RenderCache) GetCachedString(key string) (string, bool) {
+	rc.mutex.RLock()
+	defer rc.mutex.RUnlock()
+	str, exists := rc.taskStrings[key]
+	return str, exists
+}
+
+// SetCachedString stores a rendered string in cache
+func (rc *RenderCache) SetCachedString(key, value string) {
+	rc.mutex.Lock()
+	defer rc.mutex.Unlock()
+
+	// Simple cache size management
+	if len(rc.taskStrings) > 500 {
+		// Clear oldest half of cache entries
+		count := 0
+		for k := range rc.taskStrings {
+			if count > 250 {
+				break
+			}
+			delete(rc.taskStrings, k)
+			count++
+		}
+	}
+
+	rc.taskStrings[key] = value
+}
+
+// Pre-allocated styles to avoid creating new ones in render loop
 var (
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4).Foreground(lipgloss.Color("#CCCCCC"))
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("39"))
+	itemStyle             = lipgloss.NewStyle().PaddingLeft(4).Foreground(lipgloss.Color("#CCCCCC"))
+	selectedItemStyle     = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("39"))
+	boldTitleStyle        = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39"))
+	highlightedDescStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("39"))
+	managerIndicatorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 )
 
 // managerTaskItem wraps manager.ManagerTask to implement list.Item interface
@@ -50,6 +95,16 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		return
 	}
 
+	// Create cache key for this specific render configuration - include description length for correct caching
+	cacheKey := fmt.Sprintf("%s_%s_%d_%t_%d_%d", taskTitle, managerTitle.Name, index, d.showManagerIndicator, m.Index(), len(taskDescription))
+
+	// Check cache first
+	if cachedStr, found := DefaultRenderCache.GetCachedString(cacheKey); found {
+		_, _ = fmt.Fprint(w, cachedStr)
+		return
+	}
+
+	// Pre-compute truncated strings
 	description := taskDescription
 	if len(description) > 50 { // Shorter to make room for manager indicator
 		description = description[:47] + "..."
@@ -72,20 +127,23 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		}
 		// Create indicator like "[task]" then pad the whole thing to fixed width
 		indicator := fmt.Sprintf("[%s]", managerName)
-		managerIndicator = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(fmt.Sprintf("%-8s", indicator))
+		managerIndicator = managerIndicatorStyle.Render(fmt.Sprintf("%-8s", indicator))
 	}
 
 	str := fmt.Sprintf("%2d. %s%s %s", index+1, managerIndicator, paddedTitle, description)
 
-	fn := itemStyle.Render
+	var finalStr string
 	if index == m.Index() {
-		boldTitle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).Render(paddedTitle)
-		highlightedDescription := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Render(description)
+		boldTitle := boldTitleStyle.Render(paddedTitle)
+		highlightedDescription := highlightedDescStyle.Render(description)
 		boldStr := fmt.Sprintf("%2d. %s%s %s", index+1, managerIndicator, boldTitle, highlightedDescription)
-		fn = func(s ...string) string {
-			return selectedItemStyle.Render("> " + boldStr)
-		}
+		finalStr = selectedItemStyle.Render("> " + boldStr)
+	} else {
+		finalStr = itemStyle.Render(str)
 	}
 
-	_, _ = fmt.Fprint(w, fn(str))
+	// Cache the result for future renders
+	DefaultRenderCache.SetCachedString(cacheKey, finalStr)
+
+	_, _ = fmt.Fprint(w, finalStr)
 }

@@ -60,29 +60,32 @@ type ConfigFile struct {
 func ParseFile[T any](mf *ConfigFile) (T, error) {
 	var result T
 
-	// Determine file type based on extension
-	ext := strings.ToLower(filepath.Ext(mf.Filename))
-
-	switch ext {
-	case ".json":
-		err := json.Unmarshal(mf.File, &result)
-		if err != nil {
-			message := fmt.Sprintf("Failed to parse JSON config %s file", mf.Filename)
+	// Use unified cache for parsing - much simpler!
+	err := cache.DefaultFSCache.ParseFile(mf.Filename, &result)
+	if err != nil {
+		// Fallback to manual parsing if cache doesn't handle it
+		ext := strings.ToLower(filepath.Ext(mf.Filename))
+		switch ext {
+		case ".json":
+			err := json.Unmarshal(mf.File, &result)
+			if err != nil {
+				message := fmt.Sprintf("Failed to parse JSON config %s file", mf.Filename)
+				logger.Error(message, err)
+				return result, err
+			}
+		case ".yaml", ".yml":
+			err := yaml.Unmarshal(mf.File, &result)
+			if err != nil {
+				message := fmt.Sprintf("Failed to parse YAML config %s file", mf.Filename)
+				logger.Error(message, err)
+				return result, err
+			}
+		default:
+			err := fmt.Errorf("unsupported file type: %s", ext)
+			message := fmt.Sprintf("Unsupported config file type %s", mf.Filename)
 			logger.Error(message, err)
 			return result, err
 		}
-	case ".yaml", ".yml":
-		err := yaml.Unmarshal(mf.File, &result)
-		if err != nil {
-			message := fmt.Sprintf("Failed to parse YAML config %s file", mf.Filename)
-			logger.Error(message, err)
-			return result, err
-		}
-	default:
-		err := fmt.Errorf("unsupported file type: %s", ext)
-		message := fmt.Sprintf("Unsupported config file type %s", mf.Filename)
-		logger.Error(message, err)
-		return result, err
 	}
 
 	return result, nil

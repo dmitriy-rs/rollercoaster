@@ -1,11 +1,12 @@
 package jsmanager
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/manager/cache"
@@ -16,6 +17,12 @@ type PnpmWorkspace struct {
 }
 
 const pnpmLockFilename = "pnpm-lock.yaml"
+const lockFileHeaderSize = 512 // Read only first 512 bytes for version detection
+
+// Compiled regex patterns for better performance
+var (
+	pnpmVersionRegex = regexp.MustCompile(`lockfileVersion:\s*['"]?([^'"\\n]+)['"]?`)
+)
 
 func ParsePnpmWorkspace(dir *string) (*PnpmWorkspace, error) {
 	lockFilePath := filepath.Join(*dir, pnpmLockFilename)
@@ -23,18 +30,29 @@ func ParsePnpmWorkspace(dir *string) (*PnpmWorkspace, error) {
 		return nil, nil
 	}
 
+	// Read only the header portion for version detection
 	pnpmLockFile, err := os.Open(lockFilePath)
 	if err != nil {
 		return nil, err
 	}
 	defer pnpmLockFile.Close() //nolint:errcheck
 
-	scanner := bufio.NewScanner(pnpmLockFile)
-	scanner.Scan()
+	// Read only first 512 bytes - version info is always at the top
+	header := make([]byte, lockFileHeaderSize)
+	n, err := pnpmLockFile.Read(header)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
 
-	firstLine := strings.TrimSpace(scanner.Text())
-	version := strings.TrimPrefix(firstLine, "lockfileVersion: '")
-	version = strings.TrimSuffix(version, "'")
+	headerStr := string(header[:n])
+
+	// Use compiled regex to extract version
+	matches := pnpmVersionRegex.FindStringSubmatch(headerStr)
+	if len(matches) < 2 {
+		return nil, fmt.Errorf("could not find lockfileVersion in pnpm-lock.yaml")
+	}
+
+	version := strings.TrimSpace(matches[1])
 
 	switch version {
 	case "9.0":

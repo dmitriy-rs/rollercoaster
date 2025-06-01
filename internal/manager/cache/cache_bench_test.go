@@ -5,12 +5,14 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 // BenchmarkFileOperations_WithoutCache benchmarks file operations without caching
 func BenchmarkFileOperations_WithoutCache(b *testing.B) {
 	tmpDir := b.TempDir()
-	
+
 	// Create test files
 	testFiles := []string{"package.json", "yarn.lock", "pnpm-lock.yaml", "Taskfile.yml"}
 	for _, filename := range testFiles {
@@ -19,34 +21,28 @@ func BenchmarkFileOperations_WithoutCache(b *testing.B) {
 			content = "version: '3'\ntasks:\n  test:\n    desc: 'Test task'"
 		}
 		err := os.WriteFile(filepath.Join(tmpDir, filename), []byte(content), 0644)
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 	}
-	
+
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		// Simulate typical operations without cache
 		for _, filename := range testFiles {
 			fullPath := filepath.Join(tmpDir, filename)
-			
+
 			// Check if file exists
 			_, err := os.Stat(fullPath)
 			if err == nil {
 				// Read file content
 				_, err := os.ReadFile(fullPath)
-				if err != nil {
-					b.Fatal(err)
-				}
+				require.NoError(b, err)
 			}
 		}
-		
+
 		// Read directory
 		_, err := os.ReadDir(tmpDir)
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 	}
 }
 
@@ -54,7 +50,7 @@ func BenchmarkFileOperations_WithoutCache(b *testing.B) {
 func BenchmarkFileOperations_WithCache(b *testing.B) {
 	tmpDir := b.TempDir()
 	cache := NewFSCache(5 * time.Second)
-	
+
 	// Create test files
 	testFiles := []string{"package.json", "yarn.lock", "pnpm-lock.yaml", "Taskfile.yml"}
 	for _, filename := range testFiles {
@@ -63,53 +59,45 @@ func BenchmarkFileOperations_WithCache(b *testing.B) {
 			content = "version: '3'\ntasks:\n  test:\n    desc: 'Test task'"
 		}
 		err := os.WriteFile(filepath.Join(tmpDir, filename), []byte(content), 0644)
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 	}
-	
+
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		// Simulate typical operations with cache
 		for _, filename := range testFiles {
 			fullPath := filepath.Join(tmpDir, filename)
-			
+
 			// Check if file exists (cached)
 			if cache.FileExists(fullPath) {
 				// Read file content (cached)
 				_, err := cache.ReadFile(fullPath)
-				if err != nil {
-					b.Fatal(err)
-				}
+				require.NoError(b, err)
 			}
 		}
-		
+
 		// Read directory (cached)
 		_, err := cache.ReadDir(tmpDir)
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 	}
 }
 
 // BenchmarkBatchFileOperations_WithoutCache benchmarks individual file checks
 func BenchmarkBatchFileOperations_WithoutCache(b *testing.B) {
 	tmpDir := b.TempDir()
-	
+
 	// Create some test files
 	existingFiles := []string{"package.json", "yarn.lock"}
 	for _, filename := range existingFiles {
 		err := os.WriteFile(filepath.Join(tmpDir, filename), []byte("test"), 0644)
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 	}
-	
+
 	searchFiles := []string{"package.json", "yarn.lock", "pnpm-lock.yaml", "package-lock.json"}
-	
+
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		// Individual file existence checks
 		for _, filename := range searchFiles {
@@ -124,20 +112,18 @@ func BenchmarkBatchFileOperations_WithoutCache(b *testing.B) {
 func BenchmarkBatchFileOperations_WithCache(b *testing.B) {
 	tmpDir := b.TempDir()
 	cache := NewFSCache(5 * time.Second)
-	
+
 	// Create some test files
 	existingFiles := []string{"package.json", "yarn.lock"}
 	for _, filename := range existingFiles {
 		err := os.WriteFile(filepath.Join(tmpDir, filename), []byte("test"), 0644)
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 	}
-	
+
 	searchFiles := []string{"package.json", "yarn.lock", "pnpm-lock.yaml", "package-lock.json"}
-	
+
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		// Batch file existence check
 		_ = cache.FindFilesInDirectory(tmpDir, searchFiles)
@@ -147,23 +133,19 @@ func BenchmarkBatchFileOperations_WithCache(b *testing.B) {
 // BenchmarkDirectoryTraversal_WithoutCache benchmarks git directory finding without cache
 func BenchmarkDirectoryTraversal_WithoutCache(b *testing.B) {
 	tmpDir := b.TempDir()
-	
+
 	// Create nested directory structure
 	deepDir := filepath.Join(tmpDir, "a", "b", "c", "d", "e")
 	err := os.MkdirAll(deepDir, 0755)
-	if err != nil {
-		b.Fatal(err)
-	}
-	
+	require.NoError(b, err)
+
 	// Create .git directory at root
 	gitDir := filepath.Join(tmpDir, ".git")
 	err = os.Mkdir(gitDir, 0755)
-	if err != nil {
-		b.Fatal(err)
-	}
-	
+	require.NoError(b, err)
+
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		// Simulate finding git directory without cache
 		currentDir := deepDir
@@ -186,23 +168,19 @@ func BenchmarkDirectoryTraversal_WithoutCache(b *testing.B) {
 func BenchmarkDirectoryTraversal_WithCache(b *testing.B) {
 	tmpDir := b.TempDir()
 	cache := NewFSCache(5 * time.Second)
-	
+
 	// Create nested directory structure
 	deepDir := filepath.Join(tmpDir, "a", "b", "c", "d", "e")
 	err := os.MkdirAll(deepDir, 0755)
-	if err != nil {
-		b.Fatal(err)
-	}
-	
+	require.NoError(b, err)
+
 	// Create .git directory at root
 	gitDir := filepath.Join(tmpDir, ".git")
 	err = os.Mkdir(gitDir, 0755)
-	if err != nil {
-		b.Fatal(err)
-	}
-	
+	require.NoError(b, err)
+
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		// Simulate finding git directory with cache
 		currentDir := deepDir
@@ -219,4 +197,4 @@ func BenchmarkDirectoryTraversal_WithCache(b *testing.B) {
 			currentDir = parentDir
 		}
 	}
-} 
+}
