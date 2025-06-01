@@ -98,7 +98,11 @@ func (mts ManagerTaskSource) Len() int {
 }
 
 func GetManagerTasksFromList(managers []Manager) ([]ManagerTask, error) {
-	allTasks := []ManagerTask{}
+	// Pre-allocate with estimated capacity to avoid reallocations
+	// Assume average of 10 tasks per manager as reasonable estimate
+	estimatedCapacity := len(managers) * 10
+	allTasks := make([]ManagerTask, 0, estimatedCapacity)
+
 	for _, manager := range managers {
 		tasks, err := getManagerTasks(manager)
 		if err != nil {
@@ -117,6 +121,7 @@ func getManagerTasks(manager Manager) ([]ManagerTask, error) {
 	}
 	task.SortTasks(tasks)
 
+	// Pre-allocate exact capacity since we know the length
 	taskWithManager := make([]ManagerTask, len(tasks))
 	for i, t := range tasks {
 		taskWithManager[i] = ManagerTask{

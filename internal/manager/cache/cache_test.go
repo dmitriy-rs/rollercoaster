@@ -220,9 +220,9 @@ func TestFSCache_ClearExpired(t *testing.T) {
 	require.NoError(t, err)
 
 	// Add some entries to cache
-	cache.Stat(tmpFile)
-	cache.ReadDir(tmpDir)
-	cache.ReadFile(tmpFile)
+	_, _ = cache.Stat(tmpFile)
+	_, _ = cache.ReadDir(tmpDir)
+	_, _ = cache.ReadFile(tmpFile)
 
 	// Check initial stats
 	stats1 := cache.GetStats()
@@ -252,9 +252,9 @@ func TestFSCache_Clear(t *testing.T) {
 	require.NoError(t, err)
 
 	// Add entries to cache
-	cache.Stat(tmpFile)
-	cache.ReadDir(tmpDir)
-	cache.ReadFile(tmpFile)
+	_, _ = cache.Stat(tmpFile)
+	_, _ = cache.ReadDir(tmpDir)
+	_, _ = cache.ReadFile(tmpFile)
 
 	// Verify cache has entries
 	stats1 := cache.GetStats()

@@ -120,7 +120,7 @@ func parseDirectoryManagers(dir string, jsWorkspace *jsmanager.JsWorkspace) []ma
 	})
 
 	// Wait for both operations to complete
-	eg.Wait()
+	_ = eg.Wait()
 
 	// Log any errors that occurred
 	if jsErr != nil {
@@ -163,26 +163,6 @@ func parseTaskManagerWithError(dir string) (manager.Manager, error) {
 		return nil, nil
 	}
 	return taskMgr, nil
-}
-
-// parseJSManager attempts to parse a JS manager for the directory (legacy method for compatibility)
-func parseJSManager(dir string, jsWorkspace *jsmanager.JsWorkspace) manager.Manager {
-	jsManager, err := parseJSManagerWithError(dir, jsWorkspace)
-	if err != nil {
-		logger.Warning(err.Error())
-		return nil
-	}
-	return jsManager
-}
-
-// parseTaskManager attempts to parse a task manager for the directory (legacy method for compatibility)
-func parseTaskManager(dir string) manager.Manager {
-	taskMgr, err := parseTaskManagerWithError(dir)
-	if err != nil {
-		logger.Warning(err.Error())
-		return nil
-	}
-	return taskMgr
 }
 
 // collectOrderedResults collects results from concurrent parsing and maintains order

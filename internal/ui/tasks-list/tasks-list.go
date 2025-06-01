@@ -146,7 +146,7 @@ func RenderTasksList(managerTasks []manager.ManagerTask, initialFilter string) (
 		return nil, nil, fmt.Errorf("no tasks provided")
 	}
 
-	// Convert ManagerTask slice to list.Item slice (no per-item allocation)
+	// Pre-allocate with exact capacity since we know the length
 	allItems := make([]list.Item, len(managerTasks))
 	for i := range managerTasks {
 		allItems[i] = managerTasks[i]
