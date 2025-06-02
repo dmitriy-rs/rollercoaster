@@ -3,12 +3,12 @@ package configfile
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/dmitriy-rs/rollercoaster/internal/logger"
+	"github.com/dmitriy-rs/rollercoaster/internal/manager/cache"
 
 	"github.com/goccy/go-yaml"
 )
@@ -33,14 +33,21 @@ func (c *ParseConfig) GetDirectories() []string {
 		return []string{rootDir}
 	}
 
-	parsedDirectories := []string{}
+	// Pre-allocate slice based on estimated path depth
+	// Count path separators to estimate capacity needed
+	currentDepth := strings.Count(currentDir, string(filepath.Separator))
+	rootDepth := strings.Count(rootDir, string(filepath.Separator))
+	estimatedCapacity := currentDepth - rootDepth + 1
+	if estimatedCapacity < 1 {
+		estimatedCapacity = 2 // Minimum reasonable capacity
+	}
+
+	parsedDirectories := make([]string, 0, estimatedCapacity)
 	for dir := currentDir; dir != rootDir; dir = filepath.Dir(dir) {
 		parsedDirectories = append(parsedDirectories, dir)
 	}
 	parsedDirectories = append(parsedDirectories, rootDir)
 	slices.Reverse(parsedDirectories)
-
-	fmt.Println(parsedDirectories)
 
 	return parsedDirectories
 }
@@ -50,33 +57,61 @@ type ConfigFile struct {
 	File     []byte
 }
 
-func ParseFileAsYaml[T any](mf *ConfigFile) (T, error) {
+func ParseFile[T any](mf *ConfigFile) (T, error) {
 	var result T
-	err := yaml.Unmarshal(mf.File, &result)
-	if err != nil {
-		message := fmt.Sprintf("Failed to parse YAML config %s file", mf.Filename)
-		logger.Error(message, err)
-		return result, err
-	}
-	return result, nil
-}
 
-func ParseFileAsJson[T any](mf *ConfigFile) (T, error) {
-	var result T
-	err := json.Unmarshal(mf.File, &result)
+	// Use unified cache for parsing - much simpler!
+	err := cache.DefaultFSCache.ParseFile(mf.Filename, &result)
 	if err != nil {
-		message := fmt.Sprintf("Failed to parse JSON config %s file", mf.Filename)
-		logger.Error(message, err)
-		return result, err
+		// Fallback to manual parsing if cache doesn't handle it
+		ext := strings.ToLower(filepath.Ext(mf.Filename))
+		switch ext {
+		case ".json":
+			err := json.Unmarshal(mf.File, &result)
+			if err != nil {
+				message := fmt.Sprintf("Failed to parse JSON config %s file", mf.Filename)
+				logger.Error(message, err)
+				return result, err
+			}
+		case ".yaml", ".yml":
+			err := yaml.Unmarshal(mf.File, &result)
+			if err != nil {
+				message := fmt.Sprintf("Failed to parse YAML config %s file", mf.Filename)
+				logger.Error(message, err)
+				return result, err
+			}
+		default:
+			err := fmt.Errorf("unsupported file type: %s", ext)
+			message := fmt.Sprintf("Unsupported config file type %s", mf.Filename)
+			logger.Error(message, err)
+			return result, err
+		}
 	}
+
 	return result, nil
 }
 
 func FindFirstInDirectory(dir *string, filenames []string) *ConfigFile {
+	// Use batch file finding for better performance
+	if dir == nil {
+		logger.Error("Directory is nil", nil)
+		return nil
+	}
+
+	resultsMap := cache.DefaultFSCache.FindFilesInDirectoryWithContent(*dir, filenames)
+
+	// Return the first found file in the order specified
 	for _, filename := range filenames {
-		file := FindInDirectory(dir, filename)
-		if file != nil {
-			return file
+		if result, exists := resultsMap[filename]; exists && result.Exists {
+			if result.Error != nil {
+				logger.Error("Failed to read file", result.Error)
+				continue
+			}
+			fullPath := filepath.Join(*dir, filename)
+			return &ConfigFile{
+				Filename: fullPath,
+				File:     result.Content,
+			}
 		}
 	}
 	return nil
@@ -94,11 +129,11 @@ func FindInDirectory(dir *string, filename string) *ConfigFile {
 	}
 
 	fullPath := filepath.Join(*dir, filename)
-	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+	if !cache.DefaultFSCache.FileExists(fullPath) {
 		return nil
 	}
 
-	file, err := os.ReadFile(fullPath)
+	file, err := cache.DefaultFSCache.ReadFile(fullPath)
 	if err != nil {
 		logger.Error("Failed to read file", err)
 		return nil

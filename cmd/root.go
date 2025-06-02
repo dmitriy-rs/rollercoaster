@@ -20,6 +20,7 @@ var rootCmd = &cobra.Command{
 	Long:          "rollercoaster is a cli tool for running tasks/scripts in current directory.\nIt allows you to run it without knowing the name of the manager and script.",
 	SilenceErrors: false,
 	Version:       VERSION,
+	Aliases:       []string{"r"},
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := config.LoadConfig()
 		if err := execute(cmd, args, cfg); err != nil {

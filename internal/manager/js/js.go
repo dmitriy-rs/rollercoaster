@@ -23,7 +23,7 @@ func ParseJsManager(dir *string, workspace *JsWorkspace) (*JsManager, error) {
 	if packageJsonFile == nil {
 		return nil, nil
 	}
-	config, err := config.ParseFileAsJson[packageJsonConfig](packageJsonFile)
+	config, err := config.ParseFile[packageJsonConfig](packageJsonFile)
 	if err != nil {
 		return nil, err
 	}

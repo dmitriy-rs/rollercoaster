@@ -11,50 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestShouldShowManagerIndicator(t *testing.T) {
-	tests := []struct {
-		name     string
-		titles   []manager.Title
-		expected bool
-	}{
-		{
-			name:     "empty slice",
-			titles:   []manager.Title{},
-			expected: false,
-		},
-		{
-			name: "single manager",
-			titles: []manager.Title{
-				{Name: "task", Description: "Taskfile runner"},
-			},
-			expected: false,
-		},
-		{
-			name: "two managers same name",
-			titles: []manager.Title{
-				{Name: "task", Description: "Taskfile runner"},
-				{Name: "task", Description: "Another taskfile"},
-			},
-			expected: false,
-		},
-		{
-			name: "two managers different names",
-			titles: []manager.Title{
-				{Name: "task", Description: "Taskfile runner"},
-				{Name: "npm", Description: "Node.js package manager"},
-			},
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := ShouldShowManagerIndicator(tt.titles)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestManagerModel_CoreFunctionality(t *testing.T) {
 	tasks := mocks.CreateSampleTaskManagerTasks()
 	mgr := mocks.NewTaskManagerMock("task", "Taskfile runner", tasks)
@@ -69,7 +25,7 @@ func TestManagerModel_CoreFunctionality(t *testing.T) {
 			Manager: &mgrInterface,
 		}
 		managerTasks = append(managerTasks, managerTask)
-		allItems = append(allItems, managerTaskItem{ManagerTask: managerTask})
+		allItems = append(allItems, managerTask)
 	}
 
 	delegate := itemDelegate{

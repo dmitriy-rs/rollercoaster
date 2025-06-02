@@ -1,9 +1,10 @@
 package jsmanager
 
 import (
-	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/dmitriy-rs/rollercoaster/internal/manager/cache"
 )
 
 type NpmWorkspace struct {
@@ -12,8 +13,8 @@ type NpmWorkspace struct {
 const npmLockFilename = "package-lock.json"
 
 func ParseNpmWorkspace(dir *string) (*NpmWorkspace, error) {
-	packageLockFile, err := os.Stat(filepath.Join(*dir, npmLockFilename))
-	if err != nil || packageLockFile.IsDir() {
+	filename := filepath.Join(*dir, npmLockFilename)
+	if !cache.DefaultFSCache.FileExists(filename) {
 		return nil, nil
 	}
 	return &NpmWorkspace{}, nil

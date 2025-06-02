@@ -1,12 +1,14 @@
 package jsmanager
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
+	"regexp"
+
+	"github.com/dmitriy-rs/rollercoaster/internal/manager/cache"
 )
 
 type YarnWorkspace struct {
@@ -14,20 +16,37 @@ type YarnWorkspace struct {
 }
 
 const yarnLockFilename = "yarn.lock"
+const yarnHeaderSize = 1024 // Read first 1KB for yarn version detection
+
+// Compiled regex patterns for better performance
+var (
+	yarnV2Regex = regexp.MustCompile(`@npm:`)
+)
 
 func ParseYarnWorkspace(dir *string) (*YarnWorkspace, error) {
-	yarnLockFile, err := os.OpenFile(filepath.Join(*dir, yarnLockFilename), os.O_RDONLY, 0644)
-	if err != nil {
+	filename := filepath.Join(*dir, yarnLockFilename)
+	if !cache.DefaultFSCache.FileExists(filename) {
 		return nil, nil
+	}
+
+	yarnLockFile, err := os.Open(filename)
+	if err != nil {
+		return nil, err
 	}
 	defer yarnLockFile.Close() //nolint:errcheck
 
-	scanner := bufio.NewScanner(yarnLockFile)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.Contains(line, "@npm:") {
-			return nil, fmt.Errorf("yarn 2+ lockfile unsupported")
-		}
+	// Read only first 1KB for version detection - @npm: pattern appears early
+	header := make([]byte, yarnHeaderSize)
+	n, err := yarnLockFile.Read(header)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	headerStr := string(header[:n])
+
+	// Use compiled regex to check for yarn 2+ pattern
+	if yarnV2Regex.MatchString(headerStr) {
+		return nil, fmt.Errorf("yarn 2+ lockfile unsupported")
 	}
 
 	return &YarnWorkspace{version: 1}, nil

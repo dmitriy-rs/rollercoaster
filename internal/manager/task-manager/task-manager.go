@@ -73,7 +73,7 @@ func ParseTaskManager(dir *string) (*TaskManager, error) {
 }
 
 func parseConfig(file *config.ConfigFile) (*TaskManagerConfig, error) {
-	config, err := config.ParseFileAsYaml[TaskManagerConfig](file)
+	config, err := config.ParseFile[TaskManagerConfig](file)
 	if err != nil {
 		return nil, err
 	}

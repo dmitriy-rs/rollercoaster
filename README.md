@@ -66,16 +66,16 @@ alias r="rollercoaster"
 
 - [x] Default js workspace tasks (add, remove, install, npx)
 - [ ] ~CLI flag --cwd to start cli in different target directory~
-- [ ] UI with task selection
-- [ ] If multiple task matches the query show the same selection UI with mached tasks
-- [ ] --accept-first config to always select first match instead of showing the UI
+- [x] UI with task selection
+- [x] If multiple task matches the query show the same selection UI with mached tasks
+- [x] --accept-first config to always select first match instead of showing the UI
 - [ ] Show which letters where matched in UI
 - [x] Fuzzy search on mistakes if `ilt` provided `lint` should be selected if available
-- [ ] Add Bun and Deno support
+- [x] Add Bun support
 
 ### Think
 
-- [ ] Fallback js manager
+- [x] Fallback js manager
 - [ ] Nested lock files with different package managers (why?)
 
 ### On-release tasks

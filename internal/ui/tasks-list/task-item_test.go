@@ -69,10 +69,9 @@ func TestManagerTaskItem(t *testing.T) {
 				Task:    tt.task,
 				Manager: &mgr,
 			}
-			item := managerTaskItem{ManagerTask: managerTask}
 
-			assert.Equal(t, tt.expectTitle, item.Title())
-			assert.Equal(t, tt.expectFilter, item.FilterValue())
+			assert.Equal(t, tt.expectTitle, managerTask.Title())
+			assert.Equal(t, tt.expectFilter, managerTask.FilterValue())
 		})
 	}
 }
@@ -101,7 +100,7 @@ func TestItemDelegate(t *testing.T) {
 		}
 
 		tasks := []list.Item{
-			managerTaskItem{ManagerTask: managerTask},
+			managerTask,
 		}
 
 		// Create a mock list model
@@ -127,7 +126,7 @@ func TestItemDelegate(t *testing.T) {
 		}
 
 		tasks := []list.Item{
-			managerTaskItem{ManagerTask: managerTask},
+			managerTask,
 		}
 
 		listModel := list.New(tasks, delegate, 80, 10)
@@ -152,7 +151,7 @@ func TestItemDelegate(t *testing.T) {
 		}
 
 		tasks := []list.Item{
-			managerTaskItem{ManagerTask: managerTask},
+			managerTask,
 		}
 
 		listModel := list.New(tasks, delegate, 80, 10)
@@ -185,7 +184,7 @@ func TestItemDelegate(t *testing.T) {
 		}
 
 		tasks := []list.Item{
-			managerTaskItem{ManagerTask: managerTask},
+			managerTask,
 		}
 
 		listModel := list.New(tasks, delegate, 80, 10)

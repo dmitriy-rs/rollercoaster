@@ -73,7 +73,7 @@ func TestParseFileAsJson(t *testing.T) {
 			mf := config.FindInDirectory(&testdataDir, tt.filename)
 			require.NotNil(t, mf, "Failed to find test file: %s", tt.filename)
 
-			result, err := config.ParseFileAsJson[PackageJSON](mf)
+			result, err := config.ParseFile[PackageJSON](mf)
 
 			if tt.expectError {
 				assert.Error(t, err, "Expected error but got none")
@@ -122,7 +122,7 @@ func TestParseFileAsYaml(t *testing.T) {
 			mf := config.FindInDirectory(&testdataDir, tt.filename)
 			require.NotNil(t, mf, "Failed to find test file: %s", tt.filename)
 
-			result, err := config.ParseFileAsYaml[TaskfileYAML](mf)
+			result, err := config.ParseFile[TaskfileYAML](mf)
 
 			if tt.expectError {
 				assert.Error(t, err, "Expected error but got none")
